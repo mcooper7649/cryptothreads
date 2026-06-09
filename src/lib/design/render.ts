@@ -38,7 +38,7 @@ export async function renderPrintFile(input: RenderInput): Promise<RenderOutput>
   let logoW = 1;
   let logoH = 1;
   let accent = input.accent ?? "#6c5ce7";
-  let fg = "#ffffff";
+  const fg = "#ffffff";
 
   if (input.logoData) {
     const raster = await rasterizeLogo(input.logoData, !!input.isVector);

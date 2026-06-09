@@ -1,101 +1,78 @@
-import Image from "next/image";
+import Link from "next/link";
+import { getActiveProducts } from "@/lib/queries";
+import { ProductCard } from "@/components/ProductCard";
 
-export default function Home() {
+export default async function Home() {
+  const products = await getActiveProducts(8);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div>
+      {/* Hero */}
+      <section className="glow">
+        <div className="mx-auto max-w-4xl px-4 py-24 text-center">
+          <p className="mb-4 inline-block rounded-full border border-[var(--border)] px-3 py-1 text-xs uppercase tracking-widest text-white/60">
+            print-on-demand · pay in crypto or card
+          </p>
+          <h1 className="text-balance text-5xl font-black leading-tight sm:text-6xl">
+            Wear your <span className="text-[var(--accent-2)]">conviction</span>.
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-white/70">
+            Paste any coin&apos;s ticker or website and we&apos;ll spin up apparel from its
+            logo — instantly. Printed and shipped on demand. No inventory, no minimums.
+          </p>
+          <div className="mt-8 flex justify-center gap-3">
+            <Link
+              href="/generate"
+              className="rounded-full bg-[var(--accent)] px-6 py-3 font-semibold text-white hover:opacity-90"
+            >
+              Design yours →
+            </Link>
+            <Link
+              href="/shop"
+              className="rounded-full border border-[var(--border)] px-6 py-3 font-semibold hover:border-white/40"
+            >
+              Browse drops
+            </Link>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      {/* Featured */}
+      <section className="mx-auto max-w-6xl px-4 py-12">
+        <div className="mb-6 flex items-end justify-between">
+          <h2 className="text-2xl font-bold">Latest drops</h2>
+          <Link href="/shop" className="text-sm text-white/60 hover:text-white">View all →</Link>
+        </div>
+        {products.length ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {products.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[var(--border)] p-12 text-center text-white/50">
+            No drops yet. Be the first —{" "}
+            <Link href="/generate" className="text-[var(--accent-2)] underline">design one in the studio</Link>.
+          </div>
+        )}
+      </section>
+
+      {/* How it works */}
+      <section className="mx-auto max-w-6xl px-4 py-12">
+        <h2 className="mb-6 text-2xl font-bold">How it works</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            ["1 · Pick a coin", "Type a ticker (BTC) or paste a project URL. We fetch the logo automatically."],
+            ["2 · We generate", "A print-ready design is composed instantly — stylized ticker art or the exact logo."],
+            ["3 · Printed & shipped", "Pay in crypto or card. It's printed on demand and shipped straight to you."],
+          ].map(([t, d]) => (
+            <div key={t} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5">
+              <div className="font-semibold text-[var(--accent-2)]">{t}</div>
+              <p className="mt-2 text-sm text-white/60">{d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

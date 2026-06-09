@@ -166,7 +166,7 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
 
   // Persist product (unique slug with collision retry).
   const title = `${name ?? "$" + ticker} ${blank.label}`;
-  let slug = `${slugify(name ?? ticker)}-${blankType}`;
+  const slug = `${slugify(name ?? ticker)}-${blankType}`;
   const status = mockupUrls.length ? "ACTIVE" : "DRAFT";
 
   for (let attempt = 0; ; attempt++) {
