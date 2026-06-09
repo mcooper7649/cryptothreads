@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { resolveLogo, fetchLogoFromSources } from "@/lib/logo/resolve";
 import { renderPrintFile } from "@/lib/design/render";
 import { putAsset, readAsset } from "@/lib/storage";
-import { getBlank, BlankType } from "@/lib/printful/blanks";
+import { getBlank, BlankType, retailPriceCents } from "@/lib/printful/blanks";
 import { uploadFile } from "@/lib/printful/files";
 import { generateMockups } from "@/lib/printful/mockups";
 import { getCatalogVariants, getVariantBasePrice } from "@/lib/printful/catalog";
@@ -60,41 +60,50 @@ export async function previewDesign(
   };
 }
 
-export interface GenerateOptions {
-  query: string;
-  blankType?: BlankType;
-  mode?: DesignMode;
+/** Apply the EXACT-logo allowlist gate; downgrade to STYLIZED when not cleared. */
+async function gateMode(
+  mode: DesignMode,
+  logo: { symbol: string | null; domain: string | null } | null
+): Promise<DesignMode> {
+  if (mode !== "EXACT") return mode;
+  const idMatch: Array<Record<string, string>> = [];
+  if (logo?.symbol) idMatch.push({ symbol: logo.symbol });
+  if (logo?.domain) idMatch.push({ domain: logo.domain });
+  if (!idMatch.length) return "STYLIZED";
+  const permitted = await prisma.allowlist.findFirst({
+    where: { exactLogoPermitted: true, OR: idMatch },
+  });
+  return permitted ? "EXACT" : "STYLIZED";
+}
+
+export interface PrintAsset {
+  printUrl: string;
+  printKey: string;
+  previewUrl: string;
+  ticker: string;
+  name: string | null;
+  mode: DesignMode;
+  accent: string;
+  logoId: string | null;
+  base: string;
 }
 
 /**
- * Full generation: resolve+cache logo -> render print file -> store -> (Printful
- * file upload + mockups + pricing) -> persist Product. Printful steps are
- * skipped when no token is set or the print file isn't publicly reachable.
+ * Resolve+cache the logo, gate the mode, render the print file + preview, and
+ * store them. Shared by product generation and order fulfillment so the file a
+ * customer previewed is reproduced identically at print time.
  */
-export async function generateProduct(opts: GenerateOptions): Promise<Product> {
-  const blankType: BlankType = opts.blankType ?? "tee";
-  let mode: DesignMode = opts.mode ?? "STYLIZED";
-  const blank = getBlank(blankType);
-
-  const logo = await resolveLogo(opts.query);
-  const fb = fallbackIdentity(opts.query);
+export async function buildPrintAsset(
+  query: string,
+  modeIn: DesignMode,
+  blankType: BlankType
+): Promise<PrintAsset> {
+  const logo = await resolveLogo(query);
+  const fb = fallbackIdentity(query);
   const ticker = logo?.symbol || fb.ticker;
   const name = logo?.name ?? null;
+  const mode = await gateMode(modeIn, logo ?? null);
 
-  // EXACT mode is gated by the allowlist; otherwise downgrade to STYLIZED.
-  if (mode === "EXACT") {
-    const idMatch: Array<Record<string, string>> = [];
-    if (logo?.symbol) idMatch.push({ symbol: logo.symbol });
-    if (logo?.domain) idMatch.push({ domain: logo.domain });
-    const permitted = idMatch.length
-      ? await prisma.allowlist.findFirst({
-          where: { exactLogoPermitted: true, OR: idMatch },
-        })
-      : null;
-    if (!permitted) mode = "STYLIZED";
-  }
-
-  // Render print file (+ preview) from the cached logo bytes.
   const logoData =
     logo && logo.assetUrl
       ? await readAsset(logo.assetUrl, logo.assetKey).catch(() => undefined)
@@ -111,14 +120,45 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
   const printStore = await putAsset(`prints/${base}-${blankType}-${mode}.png`, rendered.printPng, "image/png");
   const previewStore = await putAsset(`previews/${base}-${blankType}-${mode}.png`, rendered.previewPng, "image/png");
 
+  return {
+    printUrl: printStore.url,
+    printKey: printStore.key,
+    previewUrl: previewStore.url,
+    ticker,
+    name,
+    mode,
+    accent: rendered.accent,
+    logoId: logo?.id ?? null,
+    base,
+  };
+}
+
+export interface GenerateOptions {
+  query: string;
+  blankType?: BlankType;
+  mode?: DesignMode;
+}
+
+/**
+ * Full generation: build print asset -> persist Design -> (Printful file upload
+ * + mockups + pricing) -> persist Product. Printful steps are skipped when no
+ * token is set or the print file isn't publicly reachable.
+ */
+export async function generateProduct(opts: GenerateOptions): Promise<Product> {
+  const blankType: BlankType = opts.blankType ?? "tee";
+  const blank = getBlank(blankType);
+
+  const asset = await buildPrintAsset(opts.query, opts.mode ?? "STYLIZED", blankType);
+  const { ticker, name, mode, base } = asset;
+
   const design = await prisma.design.create({
     data: {
-      logoId: logo?.id ?? (await ensurePlaceholderLogo(ticker)),
+      logoId: asset.logoId ?? (await ensurePlaceholderLogo(ticker)),
       mode,
       template: mode === "EXACT" ? "exact" : "stylized",
-      printFileUrl: printStore.url,
-      printFileKey: printStore.key,
-      previewUrl: previewStore.url,
+      printFileUrl: asset.printUrl,
+      printFileKey: asset.printKey,
+      previewUrl: asset.previewUrl,
     },
   });
 
@@ -126,12 +166,12 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
   let mockupUrls: string[] = [];
   let variants: unknown[] = [];
   let baseCostCents = 0;
-  let priceCents = defaultPriceCents(blankType);
+  let priceCents = retailPriceCents(blankType);
 
-  const printIsPublic = /^https?:\/\//.test(printStore.url);
+  const printIsPublic = /^https?:\/\//.test(asset.printUrl);
   if (process.env.PRINTFUL_API_TOKEN && printIsPublic) {
     try {
-      const file = await uploadFile(printStore.url, `${base}-${blankType}.png`);
+      const file = await uploadFile(asset.printUrl, `${base}-${blankType}.png`);
       const allVariants = await getCatalogVariants(blank.catalogProductId);
       const chosen = allVariants.slice(0, MOCKUP_VARIANT_CAP);
       const variantIds = chosen.map((v) => v.id);
@@ -189,10 +229,6 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
       throw e;
     }
   }
-}
-
-function defaultPriceCents(blankType: BlankType): number {
-  return { tee: 2999, hoodie: 5499, mug: 1999 }[blankType];
 }
 
 /** When no logo resolves, we still need a LogoCache row to attach the design. */

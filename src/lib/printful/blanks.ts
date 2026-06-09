@@ -55,3 +55,13 @@ export const BLANKS: Record<BlankType, BlankConfig> = {
 export function getBlank(type: BlankType): BlankConfig {
   return BLANKS[type];
 }
+
+/** Default retail price (cents) used for custom on-demand items + checkout. */
+export function retailPriceCents(type: BlankType): number {
+  return { tee: 2999, hoodie: 5499, mug: 1999 }[type];
+}
+
+export const SHIPPING_FLAT_CENTS = (() => {
+  const n = parseInt(process.env.SHIPPING_FLAT_CENTS || "", 10);
+  return Number.isFinite(n) ? n : 500;
+})();
