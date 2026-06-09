@@ -1,0 +1,136 @@
+// CryptoThreads schema — see ~/.claude/plans/enchanted-leaping-starlight.md
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DesignMode {
+  STYLIZED
+  EXACT
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  DISABLED // admin kill-switch / IP takedown
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SUBMITTED // sent to Printful
+  FULFILLED
+  SHIPPED
+  CANCELLED
+  FAILED
+}
+
+enum PaymentProvider {
+  STRIPE
+  COINBASE
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+/// Resolved-once logo cache. Checked before any external lookup.
+model LogoCache {
+  id          String   @id @default(cuid())
+  // identity keys (any may be null; at least one set)
+  symbol      String?  @unique // upper-case ticker, e.g. "UNI"
+  domain      String?  @unique // e.g. "uniswap.org"
+  coingeckoId String?  @unique // e.g. "uniswap"
+  name        String?
+  // resolved asset
+  source      String // "brandfetch" | "cryptoicons" | "coingecko"
+  isVector    Boolean  @default(false)
+  assetUrl    String // public URL to stored svg/png (Blob or /cache)
+  assetKey    String // storage key
+  contentType String // "image/svg+xml" | "image/png" ...
+  palette     Json? // dominant colors for templating
+  width       Int?
+  height      Int?
+  fetchedAt   DateTime @default(now())
+  ttlSeconds  Int      @default(2592000) // 30d refresh window
+
+  designs Design[]
+
+  @@index([fetchedAt])
+}
+
+model Design {
+  id              String     @id @default(cuid())
+  logo            LogoCache  @relation(fields: [logoId], references: [id])
+  logoId          String
+  mode            DesignMode @default(STYLIZED)
+  template        String
+  printFileUrl    String? // print-ready PNG (Blob)
+  printFileKey    String?
+  previewUrl      String? // small web preview
+  createdAt       DateTime   @default(now())
+  products        Product[]
+}
+
+model Product {
+  id                String        @id @default(cuid())
+  slug              String        @unique
+  title             String
+  design            Design        @relation(fields: [designId], references: [id])
+  designId          String
+  blankType         String // "tee" | "hoodie" | "mug"
+  printfulProductId String?
+  variants          Json? // [{variantId, size, color, priceCents}]
+  mockupUrls        String[]
+  baseCostCents     Int           @default(0)
+  priceCents        Int           @default(0)
+  status            ProductStatus @default(DRAFT)
+  createdAt         DateTime      @default(now())
+}
+
+model Order {
+  id               String          @id @default(cuid())
+  email            String
+  items            Json // [{productId, variantId, qty, priceCents}]
+  shipping         Json
+  subtotalCents    Int
+  totalCents       Int
+  provider         PaymentProvider
+  paymentStatus    PaymentStatus   @default(UNPAID)
+  externalPayId    String? // stripe session / coinbase charge id
+  printfulOrderId  String?
+  status           OrderStatus     @default(PENDING)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([externalPayId])
+}
+
+model ContentPost {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String?
+  bodyMdx     String
+  coinRefs    String[] // symbols featured
+  productIds  String[]
+  publishedAt DateTime @default(now())
+
+  @@index([publishedAt])
+}
+
+/// Gates EXACT-logo mode to merch-friendly tokens.
+model Allowlist {
+  id                  String   @id @default(cuid())
+  symbol              String?  @unique
+  domain              String?  @unique
+  exactLogoPermitted  Boolean  @default(false)
+  notes               String?
+  createdAt           DateTime @default(now())
+}
