@@ -18,6 +18,21 @@ export interface ResolveOptions {
 }
 
 /**
+ * Run the waterfall only (no DB). Used for live previews where we want the
+ * resolved bytes without touching the cache. Returns the first source hit.
+ */
+export async function fetchLogoFromSources(
+  rawQuery: string
+): Promise<SourceResult | null> {
+  const q = normalizeQuery(rawQuery);
+  for (const source of SOURCES) {
+    const result = await source(q);
+    if (result) return result;
+  }
+  return null;
+}
+
+/**
  * Resolve a coin's logo to a stored, print-ready asset.
  * 1. cache lookup (resolve-once)  2. waterfall  3. store + cache.
  */

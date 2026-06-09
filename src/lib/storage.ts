@@ -41,3 +41,13 @@ export async function putAsset(
   await fs.writeFile(filePath, data);
   return { key, url: `${LOCAL_PREFIX}/${key}` };
 }
+
+/** Read stored asset bytes back, given its url + key. */
+export async function readAsset(assetUrl: string, key: string): Promise<Buffer> {
+  if (/^https?:\/\//.test(assetUrl)) {
+    const res = await fetch(assetUrl, { redirect: "follow" });
+    if (!res.ok) throw new Error(`readAsset fetch ${res.status} ${assetUrl}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+  return fs.readFile(path.join(LOCAL_DIR, key));
+}

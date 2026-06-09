@@ -33,6 +33,7 @@ export interface ResolvedLogo {
   source: string;
   isVector: boolean;
   assetUrl: string;
+  assetKey: string;
   contentType: string;
   symbol: string | null;
   domain: string | null;

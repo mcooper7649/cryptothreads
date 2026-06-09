@@ -9,6 +9,7 @@ function toResolved(row: LogoCache, cached: boolean): ResolvedLogo {
     source: row.source,
     isVector: row.isVector,
     assetUrl: row.assetUrl,
+    assetKey: row.assetKey,
     contentType: row.contentType,
     symbol: row.symbol,
     domain: row.domain,
