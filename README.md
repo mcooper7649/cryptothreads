@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CryptoThreads
 
-## Getting Started
+Print-on-demand crypto apparel, generated from any coin's logo.
 
-First, run the development server:
+**Live:** https://cryptothreads.mycodedojo.com
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Type a ticker (`BTC`), a CoinGecko id (`ethereum`) or a project's website (`uniswap.org`). CryptoThreads finds the logo, composes a print-ready design in the browser preview, and when someone orders, renders a 4500×5400 print file that Printful prints and ships. There's no inventory: every product is made after it's paid for.
+
+## How it works
+
+```
+query ──► logo waterfall ──► render pipeline ──► storage ──► Printful ──► shipped
+          Brandfetch (SVG)    satori: JSX → SVG    Blob or        files, mockups,
+          cryptoicons (SVG)   resvg: SVG → PNG     local volume   orders
+          CoinGecko (PNG)     sharp: palette,
+          + DB cache          preview resize
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Logo waterfall** ([`src/lib/logo`](src/lib/logo)). Vector sources come first, then raster. The first hit is stored and cached in Postgres, so each logo is fetched once. Each query is classified as a ticker, a domain or a CoinGecko id before lookup, so `btc` and `BTC` share one cache entry.
+- **Render pipeline** ([`src/lib/design`](src/lib/design)). Designs are React components rendered to SVG with satori, then rasterized by resvg at 300 DPI on a transparent background. The accent color is pulled from the logo's dominant colors with sharp. The live preview rasterizes the same SVG at 900px, about 25× cheaper, with a per-IP rate limit and a small cache.
+- **Two design modes.** **Stylized** (the default) makes the ticker the hero, with the logo as a small badge. **Exact logo** prints the logo itself, and only for projects on an admin allowlist. Others quietly fall back to stylized, which keeps trademark risk low. Every product has a kill switch, and the [IP & takedown policy](src/app/policy/ip/page.tsx) is linked in the footer.
+- **Payments → fulfillment** ([`src/lib/fulfillment.ts`](src/lib/fulfillment.ts)). Checkout recomputes prices on the server and opens a Stripe Checkout or Coinbase Commerce session. The signed webhook marks the order paid only once the session is paid. It then re-renders the exact print file, maps blank + size to a Printful catalog variant (always a dark garment, since designs are light-on-dark), and creates a Printful order. Orders stay drafts unless `PRINTFUL_AUTO_CONFIRM=1`. Fulfillment is idempotent.
+- **Daily drops** ([`scripts/daily-routine.md`](scripts/daily-routine.md)). A scheduled Claude agent picks trending coins from CoinGecko, generates products through the admin API and writes a short post about them. [`scripts/daily-drop.mts`](scripts/daily-drop.mts) is the deterministic fallback.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Next.js 14 (App Router, TypeScript, Tailwind) · Prisma + PostgreSQL · satori, @resvg/resvg-js, sharp · Printful API v2 · Stripe Checkout · Coinbase Commerce · Zod · Docker
 
-## Learn More
+## Running it
 
-To learn more about Next.js, take a look at the following resources:
+### Self-hosted (how the live store runs)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+cp .env.example .env    # set POSTGRES_PASSWORD, ADMIN_TOKEN, SITE_URL, and the keys below
+docker compose up -d --build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Compose runs the app and Postgres 16. The schema is applied on start, and generated assets live in a volume served at `/cache/…`. Put it behind a reverse proxy with HTTPS: Printful downloads print files from `SITE_URL`, so that has to be a public https origin.
 
-## Deploy on Vercel
+### Local development
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm install
+cp .env.example .env    # DATABASE_URL pointing at any Postgres
+npm run db:push
+npm run dev
+npx tsx scripts/render-smoke.mts   # renders BTC/ETH print files without a database
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Keys
+
+| Variable | Needed for |
+|---|---|
+| `PRINTFUL_API_TOKEN`, `PRINTFUL_STORE_ID` | mockups, catalog prices, orders |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | card checkout (`sk_test_…` shows a test-mode banner) |
+| `COINBASE_COMMERCE_API_KEY`, `COINBASE_COMMERCE_WEBHOOK_SECRET` | crypto checkout (optional) |
+| `BRANDFETCH_CLIENT_ID`, `COINGECKO_DEMO_KEY` | better logo coverage and rate limits (optional) |
+| `ADMIN_TOKEN` | `/admin`, `/api/generate`, `/api/admin/*` |
+
+Checkout offers only the payment methods whose keys are set, and ships only to `SHIP_COUNTRIES`.
+
+## Admin
+
+`/admin` takes the `ADMIN_TOKEN`. From there you can generate products, enable or disable them, and manage the exact-logo allowlist. Products without Printful mockups stay drafts and don't appear in the shop.
+
+## License
+
+MIT for the code. Coin names and logos belong to their projects. Designs are fan-made and not affiliated with or endorsed by them.
