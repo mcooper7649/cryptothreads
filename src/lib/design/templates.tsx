@@ -1,4 +1,6 @@
 import React from "react";
+import type { StyleId } from "./styles";
+import { BoxLogo, Meme, PixelArt, PumpChart, Receipt, Stamp } from "./templates-street";
 
 export interface TemplateProps {
   ticker: string; // e.g. "BTC"
@@ -8,10 +10,14 @@ export interface TemplateProps {
   logoW: number;
   logoH: number;
   accent: string;
+  /** Text color that reads on a solid accent fill. */
+  onAccent: string;
   fg: string;
+  /** Slogan lines for styles that print one. */
+  slogan: string[];
 }
 
-export type TemplateName = "stylized" | "exact";
+export type TemplateName = StyleId | "exact";
 
 // Fit the ticker to the canvas width: shorter tickers render larger.
 function tickerFontSize(ticker: string): number {
@@ -149,6 +155,12 @@ function Exact(p: TemplateProps): React.ReactElement {
 }
 
 export const TEMPLATES: Record<TemplateName, (p: TemplateProps) => React.ReactElement> = {
-  stylized: Stylized,
+  ticker: Stylized,
+  box: BoxLogo,
+  slogan: Meme,
+  chart: PumpChart,
+  receipt: Receipt,
+  stamp: Stamp,
+  pixel: PixelArt,
   exact: Exact,
 };

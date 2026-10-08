@@ -16,7 +16,18 @@ let cache: SatoriFont[] | null = null;
 /** Load + memoize the bundled fonts used by the design templates. */
 export function getFonts(): SatoriFont[] {
   if (cache) return cache;
+  const f = (name: string, file: string, weight: SatoriFont["weight"]): SatoriFont => ({
+    name,
+    data: readFileSync(path.join(FONT_DIR, file)),
+    weight,
+    style: "normal",
+  });
   cache = [
+    f("Anton", "Anton-Regular.ttf", 400),
+    f("Press Start 2P", "PressStart2P-Regular.ttf", 400),
+    f("IBM Plex Mono", "IBMPlexMono-Regular.ttf", 400),
+    f("IBM Plex Mono", "IBMPlexMono-Bold.ttf", 700),
+    f("Permanent Marker", "PermanentMarker-Regular.ttf", 400),
     {
       name: "Archivo Black",
       data: readFileSync(path.join(FONT_DIR, "ArchivoBlack-Regular.ttf")),
