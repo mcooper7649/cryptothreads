@@ -48,6 +48,7 @@ export async function previewDesign(
     ticker,
     name: name ?? undefined,
     mode,
+    previewOnly: true,
   });
 
   return {
@@ -166,31 +167,36 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
   let mockupUrls: string[] = [];
   let variants: unknown[] = [];
   let baseCostCents = 0;
-  let priceCents = retailPriceCents(blankType);
+  const priceCents = retailPriceCents(blankType);
 
   const printIsPublic = /^https?:\/\//.test(asset.printUrl);
   if (process.env.PRINTFUL_API_TOKEN && printIsPublic) {
     try {
       const file = await uploadFile(asset.printUrl, `${base}-${blankType}.png`);
       const allVariants = await getCatalogVariants(blank.catalogProductId);
-      const chosen = allVariants.slice(0, MOCKUP_VARIANT_CAP);
+      // Print files are light-on-dark, so list and mock up dark garments only
+      // (one per size). Mugs have no color/size split, so they keep the first variants.
+      const dark = allVariants.filter((v) => /black|dark|charcoal/i.test(v.color || ""));
+      const darkColor = dark[0]?.color;
+      const pool = darkColor ? dark.filter((v) => v.color === darkColor) : allVariants;
+      const chosen = blankType === "mug" ? pool.slice(0, MOCKUP_VARIANT_CAP) : pool;
       const variantIds = chosen.map((v) => v.id);
 
       if (variantIds.length) {
         const mocks = await generateMockups({
           catalogProductId: blank.catalogProductId,
-          catalogVariantIds: variantIds,
+          // One mockup is enough when every variant is the same garment color.
+          catalogVariantIds: variantIds.slice(0, blankType === "mug" ? MOCKUP_VARIANT_CAP : 1),
           placement: blank.placement,
           technique: blank.technique,
           fileId: file.id,
         });
         mockupUrls = mocks.map((m) => m.url);
 
+        // Retail price is fixed per blank (the same price checkout charges);
+        // the Printful cost is recorded so the admin can watch margins.
         const cost = await getVariantBasePrice(variantIds[0]);
-        if (cost != null) {
-          baseCostCents = Math.round(cost * 100);
-          priceCents = Math.round(cost * blank.markup * 100);
-        }
+        if (cost != null) baseCostCents = Math.round(cost * 100);
         variants = chosen.map((v) => ({
           variantId: v.id,
           size: v.size,
@@ -215,6 +221,7 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
         data: {
           slug: attempt ? `${slug}-${design.id.slice(-4)}` : slug,
           title,
+          query: opts.query,
           designId: design.id,
           blankType,
           variants: variants as any,

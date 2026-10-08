@@ -33,6 +33,8 @@ export async function createStripeCheckout(opts: {
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: opts.email,
+    // Ask Stripe to email a receipt even if dashboard receipts are off.
+    ...(opts.email ? { payment_intent_data: { receipt_email: opts.email } } : {}),
     line_items: [
       ...opts.lines.map((l) => ({
         quantity: l.qty,

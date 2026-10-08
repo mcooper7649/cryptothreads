@@ -7,7 +7,6 @@ import { formatPrice } from "@/lib/format";
 const BLANKS = [
   { type: "tee", label: "T-Shirt", priceCents: 2999 },
   { type: "hoodie", label: "Hoodie", priceCents: 5499 },
-  { type: "mug", label: "Mug", priceCents: 1999 },
 ] as const;
 
 const SIZES = ["S", "M", "L", "XL", "2XL"];
@@ -132,26 +131,24 @@ export function GenerateClient() {
           </div>
         </div>
 
-        {blank.type !== "mug" && (
-          <div>
-            <div className="mb-2 text-sm text-white/60">Size</div>
-            <div className="flex flex-wrap gap-2">
-              {SIZES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSize(s)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm ${
-                    size === s
-                      ? "border-[var(--accent)] bg-[var(--accent)]/20"
-                      : "border-[var(--border)] hover:border-white/40"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+        <div>
+          <div className="mb-2 text-sm text-white/60">Size</div>
+          <div className="flex flex-wrap gap-2">
+            {SIZES.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSize(s)}
+                className={`rounded-lg border px-3 py-1.5 text-sm ${
+                  size === s
+                    ? "border-[var(--accent)] bg-[var(--accent)]/20"
+                    : "border-[var(--border)] hover:border-white/40"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         <button
           disabled={!canAdd}
@@ -162,7 +159,7 @@ export function GenerateClient() {
               blankType: blank.type,
               mode,
               query: query.trim(),
-              size: blank.type === "mug" ? undefined : size,
+              size,
               previewUrl: preview.previewDataUri,
               priceCents: blank.priceCents,
             })

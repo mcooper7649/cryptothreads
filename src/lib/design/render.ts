@@ -9,6 +9,7 @@ import { TEMPLATES, TemplateName, TemplateProps } from "./templates";
 // Printful DTG large print area @ ~300 DPI (15" x 18").
 export const PRINT_W = 4500;
 export const PRINT_H = 5400;
+const PREVIEW_W = 900;
 
 export interface RenderInput {
   logoData?: Buffer; // raw bytes; omit for text-only design
@@ -18,10 +19,12 @@ export interface RenderInput {
   tagline?: string;
   mode?: "STYLIZED" | "EXACT";
   accent?: string; // override palette-derived accent
+  /** Skip the full-resolution print file and rasterize only the web preview (~25x cheaper). */
+  previewOnly?: boolean;
 }
 
 export interface RenderOutput {
-  printPng: Buffer; // full-res transparent print file
+  printPng: Buffer; // full-res transparent print file (empty when previewOnly)
   previewPng: Buffer; // small web preview
   width: number;
   height: number;
@@ -72,6 +75,15 @@ export async function renderPrintFile(input: RenderInput): Promise<RenderOutput>
     fonts: getFonts(),
   });
 
+  if (input.previewOnly) {
+    const previewPng = Buffer.from(
+      new Resvg(svg, { fitTo: { mode: "width", value: PREVIEW_W }, background: "rgba(0,0,0,0)" })
+        .render()
+        .asPng()
+    );
+    return { printPng: Buffer.alloc(0), previewPng, width: PRINT_W, height: PRINT_H, accent };
+  }
+
   const resvg = new Resvg(svg, {
     fitTo: { mode: "width", value: PRINT_W },
     background: "rgba(0,0,0,0)",
@@ -79,7 +91,7 @@ export async function renderPrintFile(input: RenderInput): Promise<RenderOutput>
   const printPng = Buffer.from(resvg.render().asPng());
 
   const previewPng = await sharp(printPng)
-    .resize({ width: 900, fit: "inside" })
+    .resize({ width: PREVIEW_W, fit: "inside" })
     .png()
     .toBuffer();
 

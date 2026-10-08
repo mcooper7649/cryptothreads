@@ -82,6 +82,8 @@ model Product {
   id                String        @id @default(cuid())
   slug              String        @unique
   title             String
+  /// The ticker/website the design was generated from; re-used at fulfillment.
+  query             String?
   design            Design        @relation(fields: [designId], references: [id])
   designId          String
   blankType         String // "tee" | "hoodie" | "mug"

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
-import type { Product, Design, ContentPost } from "@prisma/client";
+import type { Product, Design, LogoCache, ContentPost } from "@prisma/client";
 
-export type ProductWithDesign = Product & { design: Design };
+export type ProductWithDesign = Product & { design: Design & { logo: LogoCache } };
 
 /**
  * Storefront read helpers. Each swallows DB errors and returns an empty/null
@@ -12,7 +12,7 @@ export async function getActiveProducts(limit = 24): Promise<ProductWithDesign[]
   try {
     return await prisma.product.findMany({
       where: { status: "ACTIVE" },
-      include: { design: true },
+      include: { design: { include: { logo: true } } },
       orderBy: { createdAt: "desc" },
       take: limit,
     });
@@ -27,7 +27,7 @@ export async function getProductBySlug(
   try {
     return await prisma.product.findUnique({
       where: { slug },
-      include: { design: true },
+      include: { design: { include: { logo: true } } },
     });
   } catch {
     return null;

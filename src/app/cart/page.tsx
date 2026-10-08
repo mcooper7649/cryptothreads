@@ -74,7 +74,7 @@ export default function CartPage() {
         Checkout →
       </Link>
       <p className="mt-3 text-center text-xs text-white/40">
-        Pay with card or crypto. Shipping calculated at checkout.
+        Flat $5 shipping. Pay at checkout.
       </p>
     </div>
   );

@@ -8,7 +8,7 @@ export const maxDuration = 120; // mockup generation can take a while
 
 const Body = z.object({
   query: z.string().min(1).max(128),
-  blankType: z.enum(["tee", "hoodie", "mug"]).optional(),
+  blankType: z.enum(["tee", "hoodie"]).optional(),
   mode: z.enum(["STYLIZED", "EXACT"]).optional(),
 });
 

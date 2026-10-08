@@ -31,7 +31,8 @@ export default async function ProductPage({
       : [];
 
   // The coin query used to (re)generate the print file at fulfillment time.
-  const query = product.title.replace(/\$/g, "").split(" ")[0];
+  // Older rows predate the column, so fall back to the logo's ticker.
+  const query = product.query ?? product.design.logo.symbol ?? product.title.replace(/\$/g, "").split(" ")[0];
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-2">

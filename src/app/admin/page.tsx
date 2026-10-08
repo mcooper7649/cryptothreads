@@ -134,7 +134,6 @@ export default function AdminPage() {
               <select className={fld} value={genBlank} onChange={(e) => setGenBlank(e.target.value)}>
                 <option value="tee">tee</option>
                 <option value="hoodie">hoodie</option>
-                <option value="mug">mug</option>
               </select>
               <select className={fld} value={genMode} onChange={(e) => setGenMode(e.target.value)}>
                 <option value="STYLIZED">stylized</option>

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { retailPriceCents, SHIPPING_FLAT_CENTS } from "@/lib/printful/blanks";
 import { createStripeCheckout } from "@/lib/payments/stripe";
 import { createCoinbaseCharge } from "@/lib/payments/coinbase";
+import { paymentProviders, shipCountries } from "@/lib/store-config";
+import { allow, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -24,7 +26,8 @@ const Body = z.object({
     .array(
       z.object({
         query: z.string().min(1),
-        blankType: z.enum(["tee", "hoodie", "mug"]),
+        // Mugs are white and the designs are light-on-dark, so they are not sold yet.
+        blankType: z.enum(["tee", "hoodie"]),
         mode: z.enum(["STYLIZED", "EXACT"]),
         size: z.string().optional(),
         qty: z.number().int().min(1).max(20),
@@ -35,6 +38,9 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  if (!allow(`checkout:${clientIp(req)}`, 10, 10 * 60_000)) {
+    return NextResponse.json({ error: "rate limited", message: "Too many checkout attempts. Try again in a few minutes." }, { status: 429 });
+  }
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
@@ -43,6 +49,12 @@ export async function POST(req: NextRequest) {
     );
   }
   const { provider, email, shipping, items } = parsed.data;
+  if (!paymentProviders().includes(provider)) {
+    return NextResponse.json({ error: "provider unavailable", message: "That payment method isn't available right now." }, { status: 400 });
+  }
+  if (!shipCountries().includes(shipping.country_code.toUpperCase())) {
+    return NextResponse.json({ error: "country unavailable", message: "We don't ship to that country yet." }, { status: 400 });
+  }
   const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
   // Recompute prices server-side (never trust client amounts).
@@ -94,7 +106,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error("[/api/checkout]", err);
     return NextResponse.json(
-      { error: "checkout failed", message: err?.message },
+      { error: "checkout failed", message: "Couldn't start checkout. Please try again in a minute." },
       { status: 500 }
     );
   }

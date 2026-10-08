@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { NextRequest } from "next/server";
 
 /**
@@ -11,5 +12,8 @@ export function isAdmin(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
   const bearer = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined;
   const header = req.headers.get("x-admin-token") ?? undefined;
-  return bearer === expected || header === expected;
+  const given = bearer ?? header;
+  if (!given) return false;
+  const a = Buffer.from(given), b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
 }

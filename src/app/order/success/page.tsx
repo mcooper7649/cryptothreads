@@ -15,8 +15,8 @@ export default function OrderSuccess() {
       <div className="text-5xl">🎉</div>
       <h1 className="mt-4 text-3xl font-black">Order placed</h1>
       <p className="mt-4 text-white/60">
-        Thanks! We&apos;re generating your print file and sending it to production. You&apos;ll
-        get a confirmation email with tracking once it ships.
+        Thanks! Your receipt is on its way by email. We&apos;re printing your order now and
+        you&apos;ll get tracking by email once it ships.
       </p>
       <div className="mt-8 flex justify-center gap-3">
         <Link href="/shop" className="rounded-full border border-[var(--border)] px-6 py-3 hover:border-white/40">

@@ -19,10 +19,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    if (event.type === "checkout.session.completed") {
-      const orderId = event.data.object?.metadata?.orderId;
-      if (orderId) await fulfillOrder(orderId);
-    }
+    // "completed" can arrive before an async payment method settles, so only
+    // fulfill once Stripe reports the session as paid.
+    const session = event.data.object;
+    const paid =
+      (event.type === "checkout.session.completed" && session?.payment_status === "paid") ||
+      event.type === "checkout.session.async_payment_succeeded";
+    if (paid && session?.metadata?.orderId) await fulfillOrder(session.metadata.orderId);
   } catch (err) {
     console.error("[stripe webhook] fulfillment error:", err);
     // 200 anyway so Stripe doesn't hammer retries; we log + can replay manually.
