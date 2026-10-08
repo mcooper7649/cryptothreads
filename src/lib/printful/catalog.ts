@@ -8,14 +8,32 @@ export interface CatalogVariant {
   color_code?: string;
 }
 
-/** Variants (size/color) for a catalog product. */
+/** All variants (size/color) for a catalog product. The API pages at 20 by default. */
 export async function getCatalogVariants(
   catalogProductId: number
 ): Promise<CatalogVariant[]> {
-  const data = await pf<CatalogVariant[]>(
-    `/catalog-products/${catalogProductId}/catalog-variants`
-  );
-  return Array.isArray(data) ? data : [];
+  const out: CatalogVariant[] = [];
+  for (let offset = 0; offset < 2000; offset += 100) {
+    const page = await pf<CatalogVariant[]>(
+      `/catalog-products/${catalogProductId}/catalog-variants?limit=100&offset=${offset}`
+    );
+    if (!Array.isArray(page) || page.length === 0) break;
+    out.push(...page);
+    if (page.length < 100) break;
+  }
+  return out;
+}
+
+/**
+ * Black first, then any other dark color. Designs are light-on-dark, so these
+ * are the only garments we list, mock up or fulfill.
+ */
+export function darkVariants(variants: CatalogVariant[]): CatalogVariant[] {
+  const black = variants.filter((v) => (v.color || "").toLowerCase() === "black");
+  if (black.length) return black;
+  const dark = variants.filter((v) => /black|dark|charcoal/i.test(v.color || ""));
+  const first = dark[0]?.color;
+  return first ? dark.filter((v) => v.color === first) : [];
 }
 
 /**
@@ -23,15 +41,15 @@ export async function getCatalogVariants(
  * Response shape varies in beta; parse defensively.
  */
 export async function getVariantBasePrice(
-  catalogVariantId: number
+  catalogVariantId: number,
+  technique = "dtg"
 ): Promise<number | null> {
   try {
     const data = await pf<any>(`/catalog-variants/${catalogVariantId}/prices`);
-    const raw =
-      data?.price ??
-      data?.variant?.price ??
-      data?.prices?.[0]?.price ??
-      data?.product?.price;
+    // v2 shape: { variant: { techniques: [{ technique_key, price, discounted_price }] } }
+    const techs: any[] = data?.variant?.techniques ?? [];
+    const t = techs.find((x) => x?.technique_key === technique) ?? techs[0];
+    const raw = t?.discounted_price ?? t?.price ?? data?.price ?? data?.variant?.price;
     const n = typeof raw === "string" ? parseFloat(raw) : raw;
     return Number.isFinite(n) ? n : null;
   } catch {

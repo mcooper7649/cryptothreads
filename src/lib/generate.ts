@@ -5,7 +5,7 @@ import { putAsset, readAsset } from "@/lib/storage";
 import { getBlank, BlankType, retailPriceCents } from "@/lib/printful/blanks";
 import { uploadFile } from "@/lib/printful/files";
 import { generateMockups } from "@/lib/printful/mockups";
-import { getCatalogVariants, getVariantBasePrice } from "@/lib/printful/catalog";
+import { darkVariants, getCatalogVariants, getVariantBasePrice } from "@/lib/printful/catalog";
 import type { DesignMode, Product } from "@prisma/client";
 
 const MOCKUP_VARIANT_CAP = parseInt(process.env.PF_MOCKUP_VARIANT_CAP || "4", 10);
@@ -176,9 +176,8 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
       const allVariants = await getCatalogVariants(blank.catalogProductId);
       // Print files are light-on-dark, so list and mock up dark garments only
       // (one per size). Mugs have no color/size split, so they keep the first variants.
-      const dark = allVariants.filter((v) => /black|dark|charcoal/i.test(v.color || ""));
-      const darkColor = dark[0]?.color;
-      const pool = darkColor ? dark.filter((v) => v.color === darkColor) : allVariants;
+      const dark = darkVariants(allVariants);
+      const pool = dark.length ? dark : allVariants;
       const chosen = blankType === "mug" ? pool.slice(0, MOCKUP_VARIANT_CAP) : pool;
       const variantIds = chosen.map((v) => v.id);
 
@@ -195,7 +194,7 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
 
         // Retail price is fixed per blank (the same price checkout charges);
         // the Printful cost is recorded so the admin can watch margins.
-        const cost = await getVariantBasePrice(variantIds[0]);
+        const cost = await getVariantBasePrice(variantIds[0], blank.technique);
         if (cost != null) baseCostCents = Math.round(cost * 100);
         variants = chosen.map((v) => ({
           variantId: v.id,

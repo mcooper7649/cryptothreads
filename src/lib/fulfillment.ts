@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { buildPrintAsset } from "@/lib/generate";
 import { getBlank, BlankType } from "@/lib/printful/blanks";
-import { getCatalogVariants } from "@/lib/printful/catalog";
+import { darkVariants, getCatalogVariants, type CatalogVariant } from "@/lib/printful/catalog";
 import { uploadFile } from "@/lib/printful/files";
 import { createDraftOrder, confirmOrder, Recipient, OrderItemInput } from "@/lib/printful/orders";
 import type { DesignMode } from "@prisma/client";
@@ -15,18 +15,12 @@ interface OrderItemSnapshot {
   title?: string;
 }
 
-/** Pick the catalog variant matching size (+ a default dark color when possible). */
-function pickVariantId(
-  variants: { id: number; size?: string; color?: string }[],
-  size?: string
-): number | null {
-  if (!variants.length) return null;
-  const bySize = size
-    ? variants.filter((v) => (v.size || "").toUpperCase() === size.toUpperCase())
-    : variants;
-  const pool = bySize.length ? bySize : variants;
-  const dark = pool.find((v) => /black|dark|charcoal/i.test(v.color || ""));
-  return (dark ?? pool[0]).id;
+/** The dark-garment variant in the ordered size (designs are light-on-dark). */
+function pickVariantId(variants: CatalogVariant[], size?: string): number | null {
+  const pool = darkVariants(variants);
+  if (!pool.length) return null;
+  const match = size ? pool.find((v) => (v.size || "").toUpperCase() === size.toUpperCase()) : undefined;
+  return (match ?? (size ? null : pool[0]))?.id ?? null;
 }
 
 /**
