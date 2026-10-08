@@ -10,7 +10,7 @@ function hex(r: number, g: number, b: number): string {
 }
 
 function luminance(r: number, g: number, b: number): number {
-  return (0.2126 * r + 0.7152 * g + 0.114 * b) / 255;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
 export interface Palette {
@@ -25,7 +25,14 @@ export interface Palette {
 export async function extractPalette(png: Buffer): Promise<Palette> {
   try {
     const { dominant } = await sharp(png).stats();
-    const { r, g, b } = dominant;
+    let { r, g, b } = dominant;
+    // Prints go on black garments, so a dark accent (common for logos on a
+    // transparent background) would vanish. Tint toward white until it reads.
+    for (let t = 0; t < 10 && luminance(r, g, b) < 0.45; t++) {
+      r += (255 - r) * 0.2;
+      g += (255 - g) * 0.2;
+      b += (255 - b) * 0.2;
+    }
     const accent = hex(r, g, b);
     const fg = luminance(r, g, b) > 0.6 ? "#0b0b0f" : "#ffffff";
     return { accent, fg };

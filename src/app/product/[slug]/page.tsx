@@ -21,9 +21,11 @@ export default async function ProductPage({
   if (!product) notFound();
 
   const variants = (product.variants as unknown as Variant[]) ?? [];
+  const ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
+  const rank = (s: string) => (ORDER.indexOf(s) + 1 || 99);
   const sizes = Array.from(
     new Set(variants.map((v) => v.size).filter((s): s is string => !!s))
-  );
+  ).sort((a, b) => rank(a) - rank(b));
   const images = product.mockupUrls.length
     ? product.mockupUrls
     : product.design.previewUrl
@@ -69,7 +71,7 @@ export default async function ProductPage({
           {formatPrice(product.priceCents)}
         </div>
         <p className="mt-4 text-sm text-white/60">
-          Printed on demand and shipped worldwide. Ships in 2–7 business days.
+          Printed on demand and shipped to the US for a flat $5. Usually arrives in 5–12 business days.
         </p>
 
         <div className="mt-8">

@@ -16,7 +16,9 @@ export interface AddToCartProps {
 
 export function AddToCart(props: AddToCartProps) {
   const { add } = useCart();
-  const [size, setSize] = useState<string | undefined>(props.sizes[0]);
+  const [size, setSize] = useState<string | undefined>(
+    props.sizes.includes("M") ? "M" : props.sizes[0]
+  );
   const [added, setAdded] = useState(false);
 
   return (
