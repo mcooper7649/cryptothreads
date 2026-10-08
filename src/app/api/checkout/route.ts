@@ -3,14 +3,12 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { retailPriceCents, SHIPPING_FLAT_CENTS } from "@/lib/printful/blanks";
 import { createStripeCheckout } from "@/lib/payments/stripe";
-import { createCoinbaseCharge } from "@/lib/payments/coinbase";
-import { paymentProviders, shipCountries, siteUrl } from "@/lib/store-config";
+import { checkoutOpen, shipCountries, siteUrl } from "@/lib/store-config";
 import { allow, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 const Body = z.object({
-  provider: z.enum(["STRIPE", "COINBASE"]),
   email: z.string().email(),
   shipping: z.object({
     name: z.string().min(1),
@@ -48,9 +46,9 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
-  const { provider, email, shipping, items } = parsed.data;
-  if (!paymentProviders().includes(provider)) {
-    return NextResponse.json({ error: "provider unavailable", message: "That payment method isn't available right now." }, { status: 400 });
+  const { email, shipping, items } = parsed.data;
+  if (!checkoutOpen()) {
+    return NextResponse.json({ error: "checkout closed", message: "Checkout isn't open yet." }, { status: 503 });
   }
   if (!shipCountries().includes(shipping.country_code.toUpperCase())) {
     return NextResponse.json({ error: "country unavailable", message: "We don't ship to that country yet." }, { status: 400 });
@@ -74,34 +72,22 @@ export async function POST(req: NextRequest) {
         shipping: { ...shipping, email } as any,
         subtotalCents,
         totalCents,
-        provider,
+        provider: "STRIPE",
         status: "PENDING",
       },
     });
 
-    if (provider === "STRIPE") {
-      const { url, id } = await createStripeCheckout({
-        orderId: order.id,
-        email,
-        lines: priced.map((p) => ({ title: p.title, priceCents: p.priceCents, qty: p.qty })),
-        shippingCents: SHIPPING_FLAT_CENTS,
-        successUrl: `${site}/order/success?o=${order.id}`,
-        cancelUrl: `${site}/cart`,
-      });
-      await prisma.order.update({ where: { id: order.id }, data: { externalPayId: id } });
-      return NextResponse.json({ url });
-    }
-
-    // COINBASE
-    const { url, code } = await createCoinbaseCharge({
+    // Stripe Checkout shows every payment method enabled in the dashboard:
+    // cards, wallets, and stablecoins (USDC/USDP/USDG) once "Crypto" is on.
+    const { url, id } = await createStripeCheckout({
       orderId: order.id,
-      amountCents: totalCents,
-      name: "CryptoThreads order",
-      description: priced.map((p) => `${p.qty}× ${p.title}`).join(", ").slice(0, 200),
-      redirectUrl: `${site}/order/success?o=${order.id}`,
+      email,
+      lines: priced.map((p) => ({ title: p.title, priceCents: p.priceCents, qty: p.qty })),
+      shippingCents: SHIPPING_FLAT_CENTS,
+      successUrl: `${site}/order/success?o=${order.id}`,
       cancelUrl: `${site}/cart`,
     });
-    await prisma.order.update({ where: { id: order.id }, data: { externalPayId: code } });
+    await prisma.order.update({ where: { id: order.id }, data: { externalPayId: id } });
     return NextResponse.json({ url });
   } catch (err: any) {
     console.error("[/api/checkout]", err);

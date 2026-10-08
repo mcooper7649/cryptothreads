@@ -31,7 +31,6 @@ enum OrderStatus {
 
 enum PaymentProvider {
   STRIPE
-  COINBASE
 }
 
 enum PaymentStatus {
@@ -105,7 +104,7 @@ model Order {
   totalCents       Int
   provider         PaymentProvider
   paymentStatus    PaymentStatus   @default(UNPAID)
-  externalPayId    String? // stripe session / coinbase charge id
+  externalPayId    String? // Stripe Checkout session id
   printfulOrderId  String?
   status           OrderStatus     @default(PENDING)
   createdAt        DateTime        @default(now())

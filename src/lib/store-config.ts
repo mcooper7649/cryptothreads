@@ -1,12 +1,7 @@
 import { SHIPPING_FLAT_CENTS } from "@/lib/printful/blanks";
 
-/** Server-side view of what the store can do right now, driven by env. */
-export function paymentProviders(): ("STRIPE" | "COINBASE")[] {
-  const out: ("STRIPE" | "COINBASE")[] = [];
-  if (process.env.STRIPE_SECRET_KEY) out.push("STRIPE");
-  if (process.env.COINBASE_COMMERCE_API_KEY) out.push("COINBASE");
-  return out;
-}
+/** Checkout needs Stripe; it handles cards and stablecoin (crypto) payments. */
+export const checkoutOpen = () => !!process.env.STRIPE_SECRET_KEY && !!process.env.STRIPE_WEBHOOK_SECRET;
 
 /** ISO country codes we ship to. Flat shipping is only priced for these. */
 export function shipCountries(): string[] {

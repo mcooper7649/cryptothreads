@@ -13,17 +13,14 @@ const COUNTRY_NAMES: Record<string, string> = {
   DE: "Germany",
 };
 
-type Provider = "STRIPE" | "COINBASE";
-
 interface Props {
-  providers: Provider[];
+  open: boolean;
   countries: string[];
   shippingCents: number;
 }
 
-export function CheckoutClient({ providers, countries, shippingCents: SHIPPING_CENTS }: Props) {
+export function CheckoutClient({ open, countries, shippingCents: SHIPPING_CENTS }: Props) {
   const { items, subtotalCents } = useCart();
-  const [provider, setProvider] = useState<Provider>(providers[0] ?? "STRIPE");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -60,7 +57,6 @@ export function CheckoutClient({ providers, countries, shippingCents: SHIPPING_C
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider,
           email: form.email,
           shipping: {
             name: form.name,
@@ -83,7 +79,7 @@ export function CheckoutClient({ providers, countries, shippingCents: SHIPPING_C
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "checkout failed");
-      window.location.href = data.url; // redirect to Stripe / Coinbase hosted page
+      window.location.href = data.url; // redirect to the Stripe-hosted payment page
     } catch (e: any) {
       setError(e?.message || "checkout failed");
       setSubmitting(false);
@@ -118,26 +114,12 @@ export function CheckoutClient({ providers, countries, shippingCents: SHIPPING_C
           </div>
         </div>
 
-        <div className="mt-6">
-          <div className="mb-2 text-sm text-white/60">Payment</div>
-          <div className="flex gap-2">
-            {providers.map((p) => (
-              <button
-                key={p}
-                onClick={() => setProvider(p)}
-                className={`rounded-lg border px-4 py-2 text-sm ${
-                  provider === p
-                    ? "border-[var(--accent)] bg-[var(--accent)]/20"
-                    : "border-[var(--border)] hover:border-white/40"
-                }`}
-              >
-                {p === "STRIPE" ? "💳 Card" : "🪙 Crypto"}
-              </button>
-            ))}
-          </div>
-        </div>
+        <p className="mt-6 text-sm text-white/60">
+          On the next page, pay by card, Apple Pay or Google Pay, or in crypto with USDC
+          (Ethereum, Base, Polygon or Solana).
+        </p>
 
-        {!providers.length && (
+        {!open && (
           <div className="mt-4 text-sm text-amber-300">
             Checkout isn&apos;t open yet. Your cart is saved, so come back soon.
           </div>
@@ -162,13 +144,13 @@ export function CheckoutClient({ providers, countries, shippingCents: SHIPPING_C
         </div>
         <button
           onClick={submit}
-          disabled={submitting || !providers.length}
+          disabled={submitting || !open}
           className="mt-5 w-full rounded-full bg-[var(--accent)] px-6 py-3 font-semibold text-white enabled:hover:opacity-90 disabled:opacity-50"
         >
-          {submitting ? "Redirecting…" : `Pay ${formatPrice(total)}`}
+          {submitting ? "Redirecting…" : `Continue to payment · ${formatPrice(total)}`}
         </button>
         <p className="mt-3 text-center text-xs text-white/40">
-          Secure checkout via {provider === "STRIPE" ? "Stripe" : "Coinbase Commerce"}.
+          Secure checkout via Stripe.
         </p>
       </aside>
     </div>
