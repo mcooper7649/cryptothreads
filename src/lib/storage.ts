@@ -1,12 +1,13 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { siteUrl } from "@/lib/store-config";
 
 /**
  * Storage abstraction. Uses Vercel Blob when BLOB_READ_WRITE_TOKEN is set,
  * otherwise writes to a local directory (STORAGE_DIR, a Docker volume when
  * self-hosted) that the /cache/[...key] route serves.
  *
- * Printful downloads print files by URL, so when NEXT_PUBLIC_SITE_URL is a
+ * Printful downloads print files by URL, so when SITE_URL is a
  * public https origin, local assets get absolute URLs on that origin.
  */
 
@@ -23,7 +24,7 @@ function hasBlob(): boolean {
 }
 
 function publicOrigin(): string {
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
+  const site = siteUrl();
   return site.startsWith("https://") ? site : "";
 }
 

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { retailPriceCents, SHIPPING_FLAT_CENTS } from "@/lib/printful/blanks";
 import { createStripeCheckout } from "@/lib/payments/stripe";
 import { createCoinbaseCharge } from "@/lib/payments/coinbase";
-import { paymentProviders, shipCountries } from "@/lib/store-config";
+import { paymentProviders, shipCountries, siteUrl } from "@/lib/store-config";
 import { allow, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   if (!shipCountries().includes(shipping.country_code.toUpperCase())) {
     return NextResponse.json({ error: "country unavailable", message: "We don't ship to that country yet." }, { status: 400 });
   }
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const site = siteUrl();
 
   // Recompute prices server-side (never trust client amounts).
   const priced = items.map((it) => ({

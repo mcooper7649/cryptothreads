@@ -18,6 +18,10 @@ export function shipCountries(): string[] {
 
 export const isTestMode = () => (process.env.STRIPE_SECRET_KEY || "").startsWith("sk_test_");
 
+/** Public origin of the store, read at runtime (NEXT_PUBLIC_* would be frozen at build time). */
+export const siteUrl = () =>
+  (process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+
 export const supportEmail = () => process.env.SUPPORT_EMAIL || "";
 
 export const shippingCents = () => SHIPPING_FLAT_CENTS;
