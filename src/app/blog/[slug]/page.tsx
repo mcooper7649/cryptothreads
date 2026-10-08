@@ -13,12 +13,12 @@ export default async function BlogPost({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-12">
-      <div className="text-xs text-white/40">
+      <div className="text-sm text-[var(--dim)]">
         {new Date(post.publishedAt).toLocaleDateString()}
       </div>
-      <h1 className="mt-1 text-4xl font-black">{post.title}</h1>
+      <h1 className="display mt-2 text-[clamp(3rem,7vw,5.5rem)]">{post.title}</h1>
       {/* bodyMdx is plain markdown for now; rendered as preformatted prose. */}
-      <div className="prose prose-invert mt-8 whitespace-pre-wrap leading-relaxed text-white/80">
+      <div className="mt-8 whitespace-pre-wrap text-lg leading-relaxed text-[var(--white)]">
         {post.bodyMdx}
       </div>
     </article>

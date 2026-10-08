@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import { buildPrintAsset } from "@/lib/generate";
-import { getBlank, BlankType } from "@/lib/printful/blanks";
-import { darkVariants, getCatalogVariants, type CatalogVariant } from "@/lib/printful/catalog";
+import { getBlank, BlankType, type BlankConfig } from "@/lib/printful/blanks";
+import { getCatalogVariants, sellableVariants, type CatalogVariant } from "@/lib/printful/catalog";
+import type { StyleId } from "@/lib/design/styles";
 import { uploadFile } from "@/lib/printful/files";
 import { createDraftOrder, confirmOrder, Recipient, OrderItemInput } from "@/lib/printful/orders";
 import type { DesignMode } from "@prisma/client";
@@ -10,14 +11,16 @@ interface OrderItemSnapshot {
   query: string;
   blankType: BlankType;
   mode: DesignMode;
+  style?: StyleId;
+  slogan?: string | null;
   size?: string;
   qty: number;
   title?: string;
 }
 
-/** The dark-garment variant in the ordered size (designs are light-on-dark). */
-function pickVariantId(variants: CatalogVariant[], size?: string): number | null {
-  const pool = darkVariants(variants);
+/** The sellable variant (black garment / square sticker) in the ordered size. */
+function pickVariantId(blank: BlankConfig, variants: CatalogVariant[], size?: string): number | null {
+  const pool = sellableVariants(blank, variants);
   if (!pool.length) return null;
   const match = size ? pool.find((v) => (v.size || "").toUpperCase() === size.toUpperCase()) : undefined;
   return (match ?? (size ? null : pool[0]))?.id ?? null;
@@ -52,13 +55,17 @@ export async function fulfillOrder(orderId: string): Promise<void> {
 
   for (const item of items) {
     const blank = getBlank(item.blankType);
-    const asset = await buildPrintAsset(item.query, item.mode, item.blankType);
+    const asset = await buildPrintAsset(
+      item.query,
+      { mode: item.mode, style: item.style, slogan: item.slogan ?? undefined },
+      item.blankType
+    );
     if (!/^https?:\/\//.test(asset.printUrl)) {
       throw new Error("fulfillment requires a public print file URL (configure Vercel Blob)");
     }
-    const file = await uploadFile(asset.printUrl, `${asset.base}-${item.blankType}.png`);
+    const file = await uploadFile(asset.printUrl, `${asset.base}.png`);
     const variants = await getCatalogVariants(blank.catalogProductId);
-    const variantId = pickVariantId(variants, item.size);
+    const variantId = pickVariantId(blank, variants, item.size);
     if (!variantId) throw new Error(`no catalog variant for ${item.blankType}/${item.size}`);
 
     pfItems.push({

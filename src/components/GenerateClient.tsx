@@ -1,35 +1,56 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useCart } from "./CartProvider";
 import { formatPrice } from "@/lib/format";
+import { BLANKS, BLANK_TYPES, type BlankType } from "@/lib/printful/blanks";
+import { DEFAULT_STYLE, STYLES, slogansFor, styleUsesSlogan, type StyleId } from "@/lib/design/styles";
 
-const BLANKS = [
-  { type: "tee", label: "T-Shirt", priceCents: 2999 },
-  { type: "hoodie", label: "Hoodie", priceCents: 5499 },
-] as const;
-
-const SIZES = ["S", "M", "L", "XL", "2XL"];
+const APPAREL_SIZES = ["S", "M", "L", "XL", "2XL", "3XL"];
+const STICKER_SIZES = ["3″×3″", "4″×4″", "5.5″×5.5″"];
+const EXAMPLES = ["BTC", "DOGE", "ETH", "SOL", "PEPE", "uniswap.org"];
 
 interface Preview {
   ticker: string;
   name: string | null;
-  accent: string;
   found: boolean;
   source: string | null;
   previewDataUri: string;
 }
 
-export function GenerateClient() {
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <section className="border-t-2 border-[var(--line)] pt-5">
+      <h2 className="display mb-4 flex items-baseline gap-3 text-3xl">
+        <span className="text-[var(--acid)]">{n}</span> {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+export function GenerateClient({ initialQuery = "", initialStyle }: { initialQuery?: string; initialStyle?: StyleId }) {
   const { add } = useCart();
-  const [query, setQuery] = useState("");
-  const [mode, setMode] = useState<"STYLIZED" | "EXACT">("STYLIZED");
-  const [blank, setBlank] = useState<(typeof BLANKS)[number]>(BLANKS[0]);
+  const [query, setQuery] = useState(initialQuery);
+  const [style, setStyle] = useState<StyleId>(initialStyle ?? DEFAULT_STYLE);
+  const [slogan, setSlogan] = useState<string>("hodl");
+  const [blank, setBlank] = useState<BlankType>("tee");
   const [size, setSize] = useState("M");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [added, setAdded] = useState(false);
   const seq = useRef(0);
+
+  const sticker = BLANKS[blank].format === "sticker";
+  const sizes = sticker ? STICKER_SIZES : APPAREL_SIZES;
+  const withSlogan = styleUsesSlogan(style);
+  const slogans = slogansFor(preview?.ticker);
+
+  useEffect(() => {
+    if (!sizes.includes(size)) setSize(sticker ? "4″×4″" : "M");
+  }, [sticker, sizes, size]);
 
   useEffect(() => {
     const q = query.trim();
@@ -43,148 +64,187 @@ export function GenerateClient() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `/api/design/preview?q=${encodeURIComponent(q)}&mode=${mode}`
-        );
+        const params = new URLSearchParams({ q, style, blank, ...(withSlogan ? { slogan } : {}) });
+        const res = await fetch(`/api/design/preview?${params}`);
         const data = await res.json();
-        if (id !== seq.current) return; // stale
+        if (id !== seq.current) return;
         if (!res.ok) {
-          setError(data?.message || "preview failed");
+          setError(data?.message || "Couldn't render that. Try a ticker like BTC.");
           setPreview(null);
         } else {
           setPreview(data);
         }
       } catch {
-        if (id === seq.current) setError("network error");
+        if (id === seq.current) setError("Network hiccup. Try again.");
       } finally {
         if (id === seq.current) setLoading(false);
       }
-    }, 450);
+    }, 400);
     return () => clearTimeout(t);
-  }, [query, mode]);
+    // Garment changes only matter when switching between apparel and sticker formats.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, style, slogan, sticker]);
 
-  const canAdd = !!preview;
+  const price = BLANKS[blank].priceCents;
+  const styleLabel = STYLES.find((s) => s.id === style)!.label;
+  const sloganLabel = withSlogan ? slogans.find((s) => s.id === slogan)?.lines.join(" ") : null;
 
   return (
-    <div className="grid gap-8 md:grid-cols-2">
-      {/* Controls */}
-      <div className="space-y-6">
-        <div>
-          <label className="mb-2 block text-sm text-white/60">Coin ticker or website</label>
+    <div className="grid gap-10 lg:grid-cols-[1fr_1.05fr]">
+      <div className="space-y-8">
+        <Step n={1} title="Pick a coin">
+          <label htmlFor="coin" className="sr-only">Coin ticker or website</label>
           <input
+            id="coin"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="BTC, ethereum, or uniswap.org"
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-lg outline-none focus:border-[var(--accent)]"
+            placeholder="DOGE, ethereum, or uniswap.org"
+            autoComplete="off"
+            className="field display py-3 text-3xl"
           />
-          {preview && (
-            <div className="mt-2 text-xs text-white/50">
-              {preview.found
-                ? `logo via ${preview.source} · $${preview.ticker}${preview.name ? ` · ${preview.name}` : ""}`
-                : `no logo found — using text-only design for $${preview.ticker}`}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {EXAMPLES.map((e) => (
+              <button key={e} type="button" className="chip" onClick={() => setQuery(e)}>{e}</button>
+            ))}
+          </div>
+          <p className="mt-3 min-h-5 text-sm text-[var(--dim)]" aria-live="polite">
+            {error ? (
+              <span className="text-[var(--red)]">{error}</span>
+            ) : preview ? (
+              preview.found
+                ? `Found $${preview.ticker}${preview.name ? ` (${preview.name})` : ""}.`
+                : `No logo found for $${preview.ticker}, so it prints as type only. Still slaps.`
+            ) : null}
+          </p>
+        </Step>
+
+        <Step n={2} title="Pick a style">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {STYLES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setStyle(s.id)}
+                aria-pressed={style === s.id}
+                className={`group border-2 p-1.5 text-left transition-colors ${
+                  style === s.id ? "border-[var(--acid)] bg-[var(--ink-2)]" : "border-[var(--line)] hover:border-[var(--white)]"
+                }`}
+              >
+                <span className="garment block aspect-[5/6]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/brand/style-${s.id}.png`} alt="" className="h-full w-full object-contain" />
+                </span>
+                <span className={`display mt-1.5 block text-lg ${style === s.id ? "text-[var(--acid)]" : ""}`}>{s.label}</span>
+              </button>
+            ))}
+          </div>
+        </Step>
+
+        {withSlogan && (
+          <Step n={3} title="Pick a meme">
+            <div className="flex flex-wrap gap-2">
+              {slogans.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSlogan(s.id)}
+                  aria-pressed={slogan === s.id}
+                  className={`chip ${slogan === s.id ? "chip-on" : ""} ${s.coins ? "border-dashed" : ""}`}
+                  title={s.coins ? `$${s.coins[0]} special` : undefined}
+                >
+                  {s.lines.join(" ")}
+                </button>
+              ))}
+            </div>
+          </Step>
+        )}
+
+        <Step n={withSlogan ? 4 : 3} title="Pick a product">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {BLANK_TYPES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setBlank(t)}
+                aria-pressed={blank === t}
+                className={`flex items-center justify-between gap-2 border-2 px-3 py-2.5 text-left ${
+                  blank === t ? "border-[var(--acid)] bg-[var(--acid)] text-[var(--ink)]" : "border-[var(--line)] hover:border-[var(--white)]"
+                }`}
+              >
+                <span className="display text-xl">{BLANKS[t].label}</span>
+                <span className="text-sm font-bold">{formatPrice(BLANKS[t].priceCents)}</span>
+              </button>
+            ))}
+          </div>
+          <fieldset className="mt-5">
+            <legend className="label">Size</legend>
+            <div className="flex flex-wrap gap-2">
+              {sizes.map((s) => (
+                <button key={s} type="button" onClick={() => setSize(s)} aria-pressed={size === s} className={`chip min-w-12 ${size === s ? "chip-on" : ""}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        </Step>
+      </div>
+
+      {/* Live preview, sticky on desktop */}
+      <div className="lg:sticky lg:top-24 lg:self-start">
+        <div className="garment relative aspect-[5/6] border-2 border-[var(--line)]">
+          {preview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={preview.previewDataUri}
+              alt={`$${preview.ticker} ${styleLabel} design`}
+              className={`h-full w-full object-contain p-6 transition-opacity ${loading ? "opacity-40" : ""}`}
+            />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-3 px-10 text-center">
+              <p className="display text-5xl text-[var(--line)]">{loading ? "Printing…" : "Your design shows up here"}</p>
+              {!loading && <p className="text-[var(--dim)]">Start by typing a coin on the left.</p>}
             </div>
           )}
-          {error && <div className="mt-2 text-xs text-red-400">{error}</div>}
-        </div>
-
-        <div>
-          <div className="mb-2 text-sm text-white/60">Style</div>
-          <div className="flex gap-2">
-            {(["STYLIZED", "EXACT"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`rounded-lg border px-4 py-2 text-sm ${
-                  mode === m
-                    ? "border-[var(--accent)] bg-[var(--accent)]/20"
-                    : "border-[var(--border)] hover:border-white/40"
-                }`}
-              >
-                {m === "STYLIZED" ? "Stylized" : "Exact logo"}
-              </button>
-            ))}
-          </div>
-          {mode === "EXACT" && (
-            <p className="mt-2 text-xs text-amber-400/80">
-              Exact-logo prints are only fulfilled for projects on our cleared list; others
-              fall back to stylized at checkout.
-            </p>
+          {loading && preview && (
+            <span className="display absolute right-3 top-3 bg-[var(--acid)] px-2 text-lg text-[var(--ink)]">Rendering</span>
           )}
         </div>
-
-        <div>
-          <div className="mb-2 text-sm text-white/60">Product</div>
-          <div className="flex gap-2">
-            {BLANKS.map((b) => (
-              <button
-                key={b.type}
-                onClick={() => setBlank(b)}
-                className={`rounded-lg border px-4 py-2 text-sm ${
-                  blank.type === b.type
-                    ? "border-[var(--accent)] bg-[var(--accent)]/20"
-                    : "border-[var(--border)] hover:border-white/40"
-                }`}
-              >
-                {b.label} · {formatPrice(b.priceCents)}
-              </button>
-            ))}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="display text-2xl">
+              {preview ? `$${preview.ticker}` : "Your coin"} · {styleLabel} {BLANKS[blank].label}
+            </p>
+            {sloganLabel && <p className="text-sm text-[var(--dim)]">&ldquo;{sloganLabel}&rdquo; · size {size}</p>}
           </div>
+          <span className="price-tag text-3xl">{formatPrice(price)}</span>
         </div>
-
-        <div>
-          <div className="mb-2 text-sm text-white/60">Size</div>
-          <div className="flex flex-wrap gap-2">
-            {SIZES.map((s) => (
-              <button
-                key={s}
-                onClick={() => setSize(s)}
-                className={`rounded-lg border px-3 py-1.5 text-sm ${
-                  size === s
-                    ? "border-[var(--accent)] bg-[var(--accent)]/20"
-                    : "border-[var(--border)] hover:border-white/40"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <button
-          disabled={!canAdd}
-          onClick={() =>
-            preview &&
+          type="button"
+          disabled={!preview || loading}
+          className="btn-acid mt-5 w-full"
+          onClick={() => {
+            if (!preview) return;
             add({
-              title: `${preview.name ?? "$" + preview.ticker} ${blank.label}`,
-              blankType: blank.type,
-              mode,
+              title: `$${preview.ticker}${sloganLabel ? ` “${sloganLabel}”` : ""} ${styleLabel} ${BLANKS[blank].label}`,
+              blankType: blank,
+              mode: "STYLIZED",
+              style,
+              slogan: withSlogan ? slogan : null,
               query: query.trim(),
               size,
               previewUrl: preview.previewDataUri,
-              priceCents: blank.priceCents,
-            })
-          }
-          className="w-full rounded-full bg-[var(--accent)] px-6 py-3 font-semibold text-white enabled:hover:opacity-90 disabled:opacity-40"
+              priceCents: price,
+            });
+            setAdded(true);
+            setTimeout(() => setAdded(false), 3000);
+          }}
         >
-          Add to cart · {formatPrice(blank.priceCents)}
+          {added ? "In the bag" : `Add to bag · ${formatPrice(price)}`}
         </button>
-      </div>
-
-      {/* Live preview */}
-      <div className="checkerboard flex aspect-square items-center justify-center rounded-2xl border border-[var(--border)]">
-        {loading ? (
-          <div className="animate-pulse text-white/40">rendering…</div>
-        ) : preview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={preview.previewDataUri}
-            alt={`${preview.ticker} design`}
-            className="h-full w-full object-contain p-6"
-          />
-        ) : (
-          <div className="px-8 text-center text-white/30">
-            Type a ticker or paste a project URL to see your design appear here.
-          </div>
+        {added && (
+          <p role="status" className="mt-3 text-sm text-[var(--dim)]">
+            Added. <Link href="/cart" className="text-[var(--acid)] underline">Check out</Link> or make another.
+          </p>
         )}
       </div>
     </div>

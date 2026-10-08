@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { retailPriceCents, SHIPPING_FLAT_CENTS } from "@/lib/printful/blanks";
+import { BLANK_TYPES, retailPriceCents, SHIPPING_FLAT_CENTS } from "@/lib/printful/blanks";
+import { STYLE_IDS } from "@/lib/design/styles";
+import { designChoice } from "@/lib/generate";
 import { createStripeCheckout } from "@/lib/payments/stripe";
 import { checkoutOpen, shipCountries, siteUrl } from "@/lib/store-config";
 import { allow, clientIp } from "@/lib/rate-limit";
@@ -24,9 +26,10 @@ const Body = z.object({
     .array(
       z.object({
         query: z.string().min(1),
-        // Mugs are white and the designs are light-on-dark, so they are not sold yet.
-        blankType: z.enum(["tee", "hoodie"]),
+        blankType: z.enum(BLANK_TYPES),
         mode: z.enum(["STYLIZED", "EXACT"]),
+        style: z.enum(STYLE_IDS).optional(),
+        slogan: z.string().max(40).optional(),
         size: z.string().optional(),
         qty: z.number().int().min(1).max(20),
         title: z.string().optional(),
@@ -62,6 +65,8 @@ export async function POST(req: NextRequest) {
   // Recompute prices server-side (never trust client amounts).
   const priced = items.map((it) => ({
     ...it,
+    // Snapshot the normalized design so fulfillment reprints exactly this.
+    ...designChoice(it),
     priceCents: retailPriceCents(it.blankType),
     title: it.title || `$${it.query.toUpperCase()} ${it.blankType}`,
   }));

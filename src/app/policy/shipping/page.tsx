@@ -8,8 +8,8 @@ export default function ShippingPolicy() {
   const countries = shipCountries();
   const email = supportEmail();
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 leading-relaxed text-white/80">
-      <h1 className="text-3xl font-black text-white">Shipping &amp; Returns</h1>
+    <div className="mx-auto max-w-3xl px-4 py-12 leading-relaxed text-[var(--white)]">
+      <h1 className="display text-6xl">Shipping &amp; Returns</h1>
       <p className="mt-6">
         Every item is printed on demand by our fulfillment partner, Printful, after your
         order is placed. Production usually takes 2–5 business days, then shipping

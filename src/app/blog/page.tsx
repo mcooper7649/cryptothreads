@@ -2,35 +2,37 @@ import Link from "next/link";
 import { getRecentPosts } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Drops: CryptoThreads" };
 
 export default async function BlogIndex() {
-  const posts = await getRecentPosts(20);
+  const posts = await getRecentPosts(50);
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="mb-2 text-3xl font-black">Drops & dispatches</h1>
-      <p className="mb-8 text-white/60">
-        New apparel and notes on what&apos;s moving in crypto — updated daily.
-      </p>
+    <div className="mx-auto max-w-4xl px-4 py-10">
+      <h1 className="display text-[clamp(3.5rem,9vw,7rem)]">Drops</h1>
+      <p className="mt-2 text-[var(--dim)]">New coins hit the rack as they trend. Here&apos;s every drop so far.</p>
       {posts.length ? (
-        <div className="space-y-6">
-          {posts.map((p) => (
-            <Link
-              key={p.id}
-              href={`/blog/${p.slug}`}
-              className="block rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5 hover:border-[var(--accent)]"
-            >
-              <div className="text-xs text-white/40">
-                {new Date(p.publishedAt).toLocaleDateString()}
-              </div>
-              <h2 className="mt-1 text-xl font-bold">{p.title}</h2>
-              {p.excerpt && <p className="mt-2 text-sm text-white/60">{p.excerpt}</p>}
-            </Link>
+        <ol className="mt-10 divide-y-2 divide-[var(--line)] border-y-2 border-[var(--line)]">
+          {posts.map((p, i) => (
+            <li key={p.id}>
+              <Link href={`/blog/${p.slug}`} className="group flex items-baseline gap-6 py-6">
+                <span className="display w-24 shrink-0 text-4xl text-[var(--acid)]">
+                  {String(posts.length - i).padStart(3, "0")}
+                </span>
+                <span>
+                  <span className="display block text-3xl group-hover:text-[var(--acid)]">{p.title}</span>
+                  {p.excerpt && <span className="mt-1 block text-[var(--dim)]">{p.excerpt}</span>}
+                  <span className="mt-1 block text-sm text-[var(--dim)]">
+                    {new Date(p.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                </span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ol>
       ) : (
-        <div className="rounded-2xl border border-dashed border-[var(--border)] p-12 text-center text-white/50">
-          No posts yet — the daily drop agent will start publishing here soon.
-        </div>
+        <p className="mt-10 border-2 border-dashed border-[var(--line)] p-12 text-center text-[var(--dim)]">
+          First drop lands soon. <Link href="/shop" className="text-[var(--acid)] underline">Shop what&apos;s live</Link>.
+        </p>
       )}
     </div>
   );

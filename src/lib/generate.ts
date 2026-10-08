@@ -5,10 +5,13 @@ import { putAsset, readAsset } from "@/lib/storage";
 import { getBlank, BlankType, retailPriceCents } from "@/lib/printful/blanks";
 import { uploadFile } from "@/lib/printful/files";
 import { generateMockups } from "@/lib/printful/mockups";
-import { darkVariants, getCatalogVariants, getVariantBasePrice } from "@/lib/printful/catalog";
+import { getCatalogVariants, getVariantBasePrice, sellableVariants } from "@/lib/printful/catalog";
+import { DEFAULT_SLOGAN, DEFAULT_STYLE, STYLES, getSlogan, styleUsesSlogan, type StyleId } from "@/lib/design/styles";
 import type { DesignMode, Product } from "@prisma/client";
 
-const MOCKUP_VARIANT_CAP = parseInt(process.env.PF_MOCKUP_VARIANT_CAP || "4", 10);
+function titleCase(s: string): string {
+  return s.toLowerCase().replace(/(^|\s)([a-z])/g, (_, a, b) => a + b.toUpperCase());
+}
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -33,10 +36,28 @@ export interface PreviewResult {
  * DB-free live preview: waterfall (no cache write) -> render preview PNG.
  * Powers the storefront /generate page.
  */
+export interface DesignChoice {
+  mode?: DesignMode;
+  style?: StyleId;
+  slogan?: string;
+}
+
+/** Normalize a design choice: styles without a slogan don't carry one. */
+export function designChoice(c: DesignChoice) {
+  const style = c.style ?? DEFAULT_STYLE;
+  return {
+    mode: c.mode ?? ("STYLIZED" as DesignMode),
+    style,
+    slogan: styleUsesSlogan(style) ? getSlogan(c.slogan ?? DEFAULT_SLOGAN).id : null,
+  };
+}
+
 export async function previewDesign(
   query: string,
-  mode: DesignMode = "STYLIZED"
+  choice: DesignChoice = {},
+  blankType: BlankType = "tee"
 ): Promise<PreviewResult> {
+  const { mode, style, slogan } = designChoice(choice);
   const src = await fetchLogoFromSources(query);
   const fb = fallbackIdentity(query);
   const ticker = src?.symbol || fb.ticker;
@@ -48,6 +69,9 @@ export async function previewDesign(
     ticker,
     name: name ?? undefined,
     mode,
+    style,
+    slogan: slogan ?? undefined,
+    format: getBlank(blankType).format,
     previewOnly: true,
   });
 
@@ -84,8 +108,11 @@ export interface PrintAsset {
   ticker: string;
   name: string | null;
   mode: DesignMode;
+  style: StyleId;
+  slogan: string | null;
   accent: string;
   logoId: string | null;
+  /** File-name stem unique to coin + design + format. */
   base: string;
 }
 
@@ -96,9 +123,11 @@ export interface PrintAsset {
  */
 export async function buildPrintAsset(
   query: string,
-  modeIn: DesignMode,
+  choice: DesignChoice,
   blankType: BlankType
 ): Promise<PrintAsset> {
+  const { mode: modeIn, style, slogan } = designChoice(choice);
+  const format = getBlank(blankType).format;
   const logo = await resolveLogo(query);
   const fb = fallbackIdentity(query);
   const ticker = logo?.symbol || fb.ticker;
@@ -115,11 +144,15 @@ export async function buildPrintAsset(
     ticker,
     name: name ?? undefined,
     mode,
+    style,
+    slogan: slogan ?? undefined,
+    format,
   });
 
-  const base = (logo?.symbol || ticker).toLowerCase();
-  const printStore = await putAsset(`prints/${base}-${blankType}-${mode}.png`, rendered.printPng, "image/png");
-  const previewStore = await putAsset(`previews/${base}-${blankType}-${mode}.png`, rendered.previewPng, "image/png");
+  const design = mode === "EXACT" ? "exact" : [style, slogan].filter(Boolean).join("-");
+  const base = slugify(`${logo?.symbol || ticker}-${design}-${format}`);
+  const printStore = await putAsset(`prints/${base}.png`, rendered.printPng, "image/png");
+  const previewStore = await putAsset(`previews/${base}.png`, rendered.previewPng, "image/png");
 
   return {
     printUrl: printStore.url,
@@ -128,16 +161,17 @@ export async function buildPrintAsset(
     ticker,
     name,
     mode,
+    style,
+    slogan,
     accent: rendered.accent,
     logoId: logo?.id ?? null,
     base,
   };
 }
 
-export interface GenerateOptions {
+export interface GenerateOptions extends DesignChoice {
   query: string;
   blankType?: BlankType;
-  mode?: DesignMode;
 }
 
 /**
@@ -149,14 +183,16 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
   const blankType: BlankType = opts.blankType ?? "tee";
   const blank = getBlank(blankType);
 
-  const asset = await buildPrintAsset(opts.query, opts.mode ?? "STYLIZED", blankType);
-  const { ticker, name, mode, base } = asset;
+  const asset = await buildPrintAsset(opts.query, opts, blankType);
+  const { ticker, mode, style, slogan, base } = asset;
 
   const design = await prisma.design.create({
     data: {
       logoId: asset.logoId ?? (await ensurePlaceholderLogo(ticker)),
       mode,
-      template: mode === "EXACT" ? "exact" : "stylized",
+      template: mode === "EXACT" ? "exact" : style,
+      style,
+      slogan,
       printFileUrl: asset.printUrl,
       printFileKey: asset.printKey,
       previewUrl: asset.previewUrl,
@@ -172,20 +208,16 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
   const printIsPublic = /^https?:\/\//.test(asset.printUrl);
   if (process.env.PRINTFUL_API_TOKEN && printIsPublic) {
     try {
-      const file = await uploadFile(asset.printUrl, `${base}-${blankType}.png`);
-      const allVariants = await getCatalogVariants(blank.catalogProductId);
-      // Print files are light-on-dark, so list and mock up dark garments only
-      // (one per size). Mugs have no color/size split, so they keep the first variants.
-      const dark = darkVariants(allVariants);
-      const pool = dark.length ? dark : allVariants;
-      const chosen = blankType === "mug" ? pool.slice(0, MOCKUP_VARIANT_CAP) : pool;
+      const file = await uploadFile(asset.printUrl, `${base}.png`);
+      // Black garments only (designs are light-on-dark); square stickers only.
+      const chosen = sellableVariants(blank, await getCatalogVariants(blank.catalogProductId));
       const variantIds = chosen.map((v) => v.id);
 
       if (variantIds.length) {
         const mocks = await generateMockups({
           catalogProductId: blank.catalogProductId,
-          // One mockup is enough when every variant is the same garment color.
-          catalogVariantIds: variantIds.slice(0, blankType === "mug" ? MOCKUP_VARIANT_CAP : 1),
+          // One mockup is enough: every variant is the same color (or the same sticker).
+          catalogVariantIds: [(chosen.find((v) => v.size === "M" || v.size === "4″×4″") ?? chosen[0]).id],
           placement: blank.placement,
           technique: blank.technique,
           fileId: file.id,
@@ -196,7 +228,7 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
           const res = await fetch(mocks[i].url);
           if (!res.ok) continue;
           const stored = await putAsset(
-            `mockups/${base}-${blankType}-${mode}-${i}.png`,
+            `mockups/${base}-${blankType}-${i}.png`,
             Buffer.from(await res.arrayBuffer()),
             "image/png"
           );
@@ -206,7 +238,7 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
         // Retail price is fixed per blank (the same price checkout charges);
         // the Printful cost is recorded so the admin can watch margins.
         // Record the cost of a typical size (M) rather than whichever variant is listed first.
-        const typical = chosen.find((v) => v.size === "M") ?? chosen[0];
+        const typical = chosen.find((v) => v.size === "M" || v.size === "4″×4″") ?? chosen[0];
         const cost = await getVariantBasePrice(typical.id, blank.technique);
         if (cost != null) baseCostCents = Math.round(cost * 100);
         variants = chosen.map((v) => ({
@@ -223,8 +255,10 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
   }
 
   // Persist product (unique slug with collision retry).
-  const title = `${name ?? "$" + ticker} ${blank.label}`;
-  const slug = `${slugify(name ?? ticker)}-${blankType}`;
+  const styleLabel = mode === "EXACT" ? "Logo" : STYLES.find((x) => x.id === style)!.label;
+  const sloganText = slogan ? ` “${titleCase(getSlogan(slogan).lines.join(" "))}”` : "";
+  const title = `$${ticker}${sloganText} ${styleLabel} ${blank.label}`;
+  const slug = slugify(`${ticker}-${mode === "EXACT" ? "logo" : style}-${slogan ?? ""}-${blankType}`);
   const status = mockupUrls.length ? "ACTIVE" : "DRAFT";
 
   for (let attempt = 0; ; attempt++) {

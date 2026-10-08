@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { previewDesign, type PreviewResult } from "@/lib/generate";
 import { allow, clientIp } from "@/lib/rate-limit";
+import { STYLE_IDS } from "@/lib/design/styles";
+import { BLANK_TYPES, getBlank } from "@/lib/printful/blanks";
 
 export const runtime = "nodejs";
 
 const Query = z.object({
   q: z.string().trim().min(1).max(128),
   mode: z.enum(["STYLIZED", "EXACT"]).optional(),
+  style: z.enum(STYLE_IDS).optional(),
+  slogan: z.string().max(40).optional(),
+  blank: z.enum(BLANK_TYPES).optional(),
 });
 
 // Recent previews, so retyping a ticker or several shoppers trying "BTC" cost one render.
@@ -19,8 +24,9 @@ export async function GET(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid query" }, { status: 400 });
   }
-  const mode = parsed.data.mode ?? "STYLIZED";
-  const key = `${mode}:${parsed.data.q.toLowerCase()}`;
+  const { q, mode = "STYLIZED", style, slogan, blank = "tee" } = parsed.data;
+  // Only the print format matters for the image, not which garment it goes on.
+  const key = [mode, style, slogan, getBlank(blank).format, q.toLowerCase()].join(":");
   const hit = cache.get(key);
   if (hit) return NextResponse.json(hit);
 
@@ -32,7 +38,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await previewDesign(parsed.data.q, mode);
+    const result = await previewDesign(q, { mode, style, slogan }, blank);
     if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value!);
     cache.set(key, result);
     return NextResponse.json(result);

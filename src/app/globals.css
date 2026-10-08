@@ -2,12 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CryptoThreads: degen streetwear. Ink, acid, red, white; hard edges, offset shadows. */
 :root {
-  --bg: #07070b;
-  --panel: #101018;
-  --border: #1e1e2a;
-  --accent: #6c5ce7;
-  --accent-2: #00e0b8;
+  --ink: #0b0b0b;
+  --ink-2: #161616;
+  --line: #2b2b2b;
+  --acid: #f5ff00;
+  --red: #ff2d2d;
+  --white: #f7f7f2;
+  --dim: #a3a39b;
+  --green: #22e07a;
 }
 
 html {
@@ -15,23 +19,107 @@ html {
 }
 
 body {
-  background: var(--bg);
-  color: #f4f4f8;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--ink);
+  color: var(--white);
+  font-family: var(--font-body), system-ui, sans-serif;
 }
 
-.glow {
-  background: radial-gradient(60% 60% at 50% 0%, rgba(108, 92, 231, 0.25) 0%, rgba(7, 7, 11, 0) 70%);
+::selection {
+  background: var(--acid);
+  color: var(--ink);
 }
 
-/* transparent-PNG preview backdrop so designs read on any garment color */
-.checkerboard {
-  background-image:
-    linear-gradient(45deg, #14141c 25%, transparent 25%),
-    linear-gradient(-45deg, #14141c 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #14141c 75%),
-    linear-gradient(-45deg, transparent 75%, #14141c 75%);
-  background-size: 24px 24px;
-  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
-  background-color: #0d0d14;
+:focus-visible {
+  outline: 3px solid var(--acid);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .display {
+    font-family: var(--font-display), Impact, sans-serif;
+    text-transform: uppercase;
+    line-height: 0.9;
+    letter-spacing: -0.01em;
+  }
+  .marker {
+    font-family: var(--font-marker), cursive;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 border-2 px-6 py-3 text-lg uppercase transition-transform;
+    font-family: var(--font-display), Impact, sans-serif;
+    letter-spacing: 0.02em;
+  }
+  .btn-acid {
+    @apply btn border-[var(--ink)] bg-[var(--acid)] text-[var(--ink)];
+    box-shadow: 6px 6px 0 var(--red);
+  }
+  .btn-acid:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: 8px 8px 0 var(--red);
+  }
+  .btn-acid:active:not(:disabled) {
+    transform: translate(4px, 4px);
+    box-shadow: 2px 2px 0 var(--red);
+  }
+  .btn-acid:disabled {
+    @apply cursor-not-allowed opacity-40;
+  }
+  .btn-ghost {
+    @apply btn border-[var(--white)] bg-transparent text-[var(--white)] hover:bg-[var(--white)] hover:text-[var(--ink)];
+  }
+
+  .chip {
+    @apply border-2 border-[var(--line)] px-3 py-1.5 text-sm font-semibold uppercase tracking-wide text-[var(--white)] transition-colors hover:border-[var(--white)];
+  }
+  .chip-on {
+    @apply border-[var(--acid)] bg-[var(--acid)] text-[var(--ink)] hover:border-[var(--acid)];
+  }
+
+  .field {
+    @apply w-full border-2 border-[var(--line)] bg-[var(--ink-2)] px-3 py-2.5 text-[var(--white)] outline-none placeholder:text-[var(--dim)] focus:border-[var(--acid)];
+  }
+
+  .price-tag {
+    @apply inline-block bg-[var(--acid)] px-2 py-0.5 text-[var(--ink)];
+    font-family: var(--font-display), Impact, sans-serif;
+    transform: rotate(-3deg);
+  }
+
+  .label {
+    @apply mb-2 block text-sm font-bold uppercase tracking-wide text-[var(--dim)];
+  }
+}
+
+/* Product art sits on garment-black, like it will in real life. */
+.garment {
+  background: radial-gradient(circle at 50% 35%, #232323 0%, #121212 70%);
+}
+
+/* Ticker-tape marquee. Content is rendered twice so the loop is seamless. */
+.marquee {
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.marquee > div {
+  display: flex;
+  flex-shrink: 0;
+  animation: marquee 40s linear infinite;
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee > div {
+    animation: none;
+  }
+  .btn-acid,
+  .btn-acid:hover:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
 }

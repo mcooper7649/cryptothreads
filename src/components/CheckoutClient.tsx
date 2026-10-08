@@ -41,10 +41,8 @@ export function CheckoutClient({ open, countries, shippingCents: SHIPPING_CENTS 
   if (!items.length) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center">
-        <h1 className="text-3xl font-black">Nothing to check out</h1>
-        <Link href="/generate" className="mt-6 inline-block text-[var(--accent-2)] underline">
-          Design something →
-        </Link>
+        <h1 className="display text-6xl">Nothing to check out</h1>
+        <Link href="/shop" className="btn-acid mt-8">Shop the drop</Link>
       </div>
     );
   }
@@ -71,6 +69,8 @@ export function CheckoutClient({ open, countries, shippingCents: SHIPPING_CENTS 
             query: i.query,
             blankType: i.blankType,
             mode: i.mode,
+            style: i.style,
+            slogan: i.slogan ?? undefined,
             size: i.size,
             qty: i.qty,
             title: i.title,
@@ -87,13 +87,12 @@ export function CheckoutClient({ open, countries, shippingCents: SHIPPING_CENTS 
   }
 
   const total = subtotalCents + SHIPPING_CENTS;
-  const fld =
-    "w-full rounded-lg border border-[var(--border)] bg-[var(--panel)] px-3 py-2 outline-none focus:border-[var(--accent)]";
+  const fld = "field";
 
   return (
     <div className="mx-auto grid max-w-5xl gap-10 px-4 py-12 md:grid-cols-[1fr_360px]">
       <div>
-        <h1 className="mb-6 text-3xl font-black">Checkout</h1>
+        <h1 className="display mb-6 text-[clamp(3rem,8vw,5rem)]">Check out</h1>
 
         <div className="space-y-3">
           <input className={fld} placeholder="Email" value={form.email} onChange={(e) => set("email", e.target.value)} />
@@ -114,42 +113,42 @@ export function CheckoutClient({ open, countries, shippingCents: SHIPPING_CENTS 
           </div>
         </div>
 
-        <p className="mt-6 text-sm text-white/60">
+        <p className="mt-6 text-sm text-[var(--dim)]">
           On the next page, pay by card, Apple Pay or Google Pay, or in crypto with USDC
           (Ethereum, Base, Polygon or Solana).
         </p>
 
         {!open && (
-          <div className="mt-4 text-sm text-amber-300">
+          <div className="mt-4 text-sm text-[var(--acid)]">
             Checkout isn&apos;t open yet. Your cart is saved, so come back soon.
           </div>
         )}
-        {error && <div className="mt-4 text-sm text-red-400">{error}</div>}
+        {error && <div className="mt-4 text-sm text-[var(--red)]">{error}</div>}
       </div>
 
-      <aside className="h-fit rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5">
-        <h2 className="mb-4 font-bold">Order summary</h2>
+      <aside className="h-fit border-2 border-[var(--line)] bg-[var(--ink-2)] p-5">
+        <h2 className="display mb-4 text-3xl">Your bag</h2>
         <div className="space-y-2 text-sm">
           {items.map((i) => (
-            <div key={i.id} className="flex justify-between text-white/70">
+            <div key={i.id} className="flex justify-between text-[var(--white)]">
               <span className="truncate pr-2">{i.qty}× {i.title}</span>
               <span>{formatPrice(i.priceCents * i.qty)}</span>
             </div>
           ))}
         </div>
-        <div className="mt-4 space-y-1 border-t border-[var(--border)] pt-4 text-sm">
-          <div className="flex justify-between text-white/60"><span>Subtotal</span><span>{formatPrice(subtotalCents)}</span></div>
-          <div className="flex justify-between text-white/60"><span>Shipping</span><span>{formatPrice(SHIPPING_CENTS)}</span></div>
+        <div className="mt-4 space-y-1 border-t-2 border-[var(--line)] pt-4 text-sm">
+          <div className="flex justify-between text-[var(--dim)]"><span>Subtotal</span><span>{formatPrice(subtotalCents)}</span></div>
+          <div className="flex justify-between text-[var(--dim)]"><span>Shipping</span><span>{formatPrice(SHIPPING_CENTS)}</span></div>
           <div className="mt-2 flex justify-between text-lg font-bold"><span>Total</span><span>{formatPrice(total)}</span></div>
         </div>
         <button
           onClick={submit}
           disabled={submitting || !open}
-          className="mt-5 w-full rounded-full bg-[var(--accent)] px-6 py-3 font-semibold text-white enabled:hover:opacity-90 disabled:opacity-50"
+          className="btn-acid mt-5 w-full"
         >
           {submitting ? "Redirecting…" : `Continue to payment · ${formatPrice(total)}`}
         </button>
-        <p className="mt-3 text-center text-xs text-white/40">
+        <p className="mt-3 text-center text-xs text-[var(--dim)]">
           Secure checkout via Stripe.
         </p>
       </aside>

@@ -1,7 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProductBySlug } from "@/lib/queries";
+import { getProductBySlug, getRelatedProducts } from "@/lib/queries";
 import { AddToCart } from "@/components/AddToCart";
+import { ProductCard } from "@/components/ProductCard";
 import { formatPrice } from "@/lib/format";
+import { BLANKS, isBlankType, sizeRank } from "@/lib/printful/blanks";
+import { STYLES, getSlogan } from "@/lib/design/styles";
 
 export const dynamic = "force-dynamic";
 
@@ -9,87 +13,111 @@ interface Variant {
   variantId: number;
   size?: string;
   color?: string;
-  priceCents?: number;
 }
 
-export default async function ProductPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export async function generateMetadata({ params }: { params: { slug: string } }) {
   const product = await getProductBySlug(params.slug);
-  if (!product) notFound();
+  return { title: product ? `${product.title}: CryptoThreads` : "CryptoThreads" };
+}
+
+export default async function ProductPage({ params }: { params: { slug: string } }) {
+  const product = await getProductBySlug(params.slug);
+  if (!product || product.status !== "ACTIVE") notFound();
+  const related = await getRelatedProducts(product);
 
   const variants = (product.variants as unknown as Variant[]) ?? [];
-  const ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
-  const rank = (s: string) => (ORDER.indexOf(s) + 1 || 99);
-  const sizes = Array.from(
-    new Set(variants.map((v) => v.size).filter((s): s is string => !!s))
-  ).sort((a, b) => rank(a) - rank(b));
-  const images = product.mockupUrls.length
-    ? product.mockupUrls
-    : product.design.previewUrl
-      ? [product.design.previewUrl]
-      : [];
-
-  // The coin query used to (re)generate the print file at fulfillment time.
-  // Older rows predate the column, so fall back to the logo's ticker.
+  const sizes = Array.from(new Set(variants.map((v) => v.size).filter((s): s is string => !!s))).sort(
+    (a, b) => sizeRank(a) - sizeRank(b)
+  );
+  const images = [...product.mockupUrls, product.design.previewUrl].filter((u): u is string => !!u);
+  const blank = isBlankType(product.blankType) ? BLANKS[product.blankType] : null;
+  const style = STYLES.find((s) => s.id === product.design.style);
+  const slogan = product.design.slogan ? getSlogan(product.design.slogan).lines.join(" ") : null;
+  // The coin query used to regenerate the print file at fulfillment time.
   const query = product.query ?? product.design.logo.symbol ?? product.title.replace(/\$/g, "").split(" ")[0];
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-2">
-      <div className="space-y-4">
-        <div className="checkerboard aspect-square overflow-hidden rounded-2xl border border-[var(--border)]">
-          {images[0] ? (
-            // eslint-disable-next-line @next/next/no-img-element
+    <div className="mx-auto max-w-7xl px-4 py-10">
+      <nav className="mb-6 text-sm text-[var(--dim)]">
+        <Link href="/shop" className="hover:text-[var(--acid)]">Shop</Link>
+        {" / "}
+        <Link href={`/shop?coin=${encodeURIComponent(query.toUpperCase())}`} className="hover:text-[var(--acid)]">
+          ${query.toUpperCase()}
+        </Link>
+      </nav>
+      <div className="grid gap-10 md:grid-cols-2">
+        <div className="space-y-3">
+          <div className="garment aspect-square border-2 border-[var(--line)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={images[0]} alt={product.title} className="h-full w-full object-contain" />
-          ) : (
-            <div className="flex h-full items-center justify-center text-white/30">no preview</div>
+          </div>
+          {images.length > 1 && (
+            <div className="grid grid-cols-4 gap-3">
+              {images.slice(1, 5).map((src) => (
+                <div key={src} className="garment aspect-square border-2 border-[var(--line)] p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="The print file on its own" className="h-full w-full object-contain" />
+                </div>
+              ))}
+            </div>
           )}
         </div>
-        {images.length > 1 && (
-          <div className="grid grid-cols-4 gap-2">
-            {images.slice(1, 5).map((src) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={src}
-                src={src}
-                alt=""
-                className="checkerboard aspect-square rounded-lg border border-[var(--border)] object-contain"
-              />
+
+        <div>
+          <p className="label">
+            {blank?.label ?? product.blankType} · {style?.label ?? "Logo"} style
+          </p>
+          <h1 className="display text-[clamp(2.75rem,5vw,4.5rem)]">{product.title}</h1>
+          <p className="mt-4">
+            <span className="price-tag text-3xl">{formatPrice(product.priceCents)}</span>
+          </p>
+          {slogan && <p className="marker mt-6 -rotate-1 text-2xl text-[var(--acid)]">&ldquo;{slogan.toLowerCase()}&rdquo;</p>}
+
+          <div className="mt-8">
+            <AddToCart
+              title={product.title}
+              blankType={product.blankType}
+              mode={product.design.mode}
+              style={product.design.style}
+              slogan={product.design.slogan}
+              query={query}
+              previewUrl={images[0] ?? ""}
+              priceCents={product.priceCents}
+              sizes={sizes}
+            />
+          </div>
+
+          <ul className="mt-8 space-y-2 border-t-2 border-[var(--line)] pt-6 text-sm text-[var(--dim)]">
+            <li>
+              {blank?.format === "sticker"
+                ? "Kiss-cut vinyl sticker with a black backing. Waterproof and laptop-ready."
+                : "Printed on a black garment, front print, direct-to-garment."}
+            </li>
+            <li>Made after you order, then shipped to the US for a flat $5. Usually 5–12 business days.</li>
+            <li>
+              Want it in another style or on something else?{" "}
+              <Link href={`/generate?q=${encodeURIComponent(query)}`} className="text-[var(--acid)] underline">
+                Remix it in the studio
+              </Link>
+              .
+            </li>
+            <li>Fan-made design, not affiliated with or endorsed by the referenced project.</li>
+          </ul>
+        </div>
+      </div>
+
+      {related.length > 0 && (
+        <section className="mt-20">
+          <h2 className="display mb-6 border-b-2 border-[var(--line)] pb-4 text-4xl sm:text-5xl">
+            More ${query.toUpperCase()}
+          </h2>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+            {related.map((p) => (
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
-        )}
-      </div>
-
-      <div>
-        <div className="mb-2 text-xs uppercase tracking-widest text-white/40">
-          {product.blankType} · {product.design.mode.toLowerCase()}
-        </div>
-        <h1 className="text-3xl font-black">{product.title}</h1>
-        <div className="mt-2 text-2xl text-[var(--accent-2)]">
-          {formatPrice(product.priceCents)}
-        </div>
-        <p className="mt-4 text-sm text-white/60">
-          Printed on demand and shipped to the US for a flat $5. Usually arrives in 5–12 business days.
-        </p>
-
-        <div className="mt-8">
-          <AddToCart
-            title={product.title}
-            blankType={product.blankType}
-            mode={product.design.mode}
-            query={query}
-            previewUrl={images[0] ?? ""}
-            priceCents={product.priceCents}
-            sizes={sizes}
-          />
-        </div>
-
-        <p className="mt-6 text-xs text-white/30">
-          Fan-made design, not affiliated with or endorsed by the referenced project.
-        </p>
-      </div>
+        </section>
+      )}
     </div>
   );
 }

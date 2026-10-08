@@ -70,6 +70,9 @@ model Design {
   logoId          String
   mode            DesignMode @default(STYLIZED)
   template        String
+  /// Print style id (see src/lib/design/styles.ts) and slogan id, for STYLIZED designs.
+  style           String     @default("ticker")
+  slogan          String?
   printFileUrl    String? // print-ready PNG (Blob)
   printFileKey    String?
   previewUrl      String? // small web preview

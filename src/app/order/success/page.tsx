@@ -12,18 +12,17 @@ export default function OrderSuccess() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-24 text-center">
-      <div className="text-5xl">🎉</div>
-      <h1 className="mt-4 text-3xl font-black">Order placed</h1>
-      <p className="mt-4 text-white/60">
+            <h1 className="display text-7xl">Bags secured</h1>
+      <p className="mt-4 text-[var(--dim)]">
         Thanks! Your receipt is on its way by email. We&apos;re printing your order now and
         you&apos;ll get tracking by email once it ships.
       </p>
       <div className="mt-8 flex justify-center gap-3">
-        <Link href="/shop" className="rounded-full border border-[var(--border)] px-6 py-3 hover:border-white/40">
+        <Link href="/shop" className="btn-ghost">
           Keep shopping
         </Link>
-        <Link href="/generate" className="rounded-full bg-[var(--accent)] px-6 py-3 font-semibold">
-          Design another →
+        <Link href="/generate" className="btn-acid">
+          Make another
         </Link>
       </div>
     </div>

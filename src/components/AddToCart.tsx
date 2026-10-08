@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useCart } from "./CartProvider";
 import { formatPrice } from "@/lib/format";
 
@@ -8,6 +9,8 @@ export interface AddToCartProps {
   title: string;
   blankType: string;
   mode: string;
+  style: string;
+  slogan: string | null;
   query: string;
   previewUrl: string;
   priceCents: number;
@@ -17,51 +20,58 @@ export interface AddToCartProps {
 export function AddToCart(props: AddToCartProps) {
   const { add } = useCart();
   const [size, setSize] = useState<string | undefined>(
-    props.sizes.includes("M") ? "M" : props.sizes[0]
+    props.sizes.includes("M") ? "M" : props.sizes.includes("4″×4″") ? "4″×4″" : props.sizes[0]
   );
   const [added, setAdded] = useState(false);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {props.sizes.length > 0 && (
-        <div>
-          <div className="mb-2 text-sm text-white/60">Size</div>
+        <fieldset>
+          <legend className="label">Size</legend>
           <div className="flex flex-wrap gap-2">
             {props.sizes.map((s) => (
               <button
                 key={s}
+                type="button"
                 onClick={() => setSize(s)}
-                className={`rounded-lg border px-3 py-1.5 text-sm ${
-                  size === s
-                    ? "border-[var(--accent)] bg-[var(--accent)]/20"
-                    : "border-[var(--border)] hover:border-white/40"
-                }`}
+                aria-pressed={size === s}
+                className={`chip min-w-12 ${size === s ? "chip-on" : ""}`}
               >
                 {s}
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
       )}
 
       <button
+        type="button"
+        className="btn-acid w-full"
         onClick={() => {
           add({
             title: props.title,
             blankType: props.blankType,
             mode: props.mode,
+            style: props.style,
+            slogan: props.slogan,
             query: props.query,
             size,
             previewUrl: props.previewUrl,
             priceCents: props.priceCents,
           });
           setAdded(true);
-          setTimeout(() => setAdded(false), 1500);
+          setTimeout(() => setAdded(false), 2500);
         }}
-        className="w-full rounded-full bg-[var(--accent)] px-6 py-3 font-semibold text-white hover:opacity-90"
       >
-        {added ? "Added ✓" : `Add to cart · ${formatPrice(props.priceCents)}`}
+        {added ? "In the bag" : `Add to bag · ${formatPrice(props.priceCents)}`}
       </button>
+      {added && (
+        <p role="status" className="text-sm text-[var(--dim)]">
+          Added.{" "}
+          <Link href="/cart" className="text-[var(--acid)] underline">Check out now</Link> or keep shopping.
+        </p>
+      )}
     </div>
   );
 }

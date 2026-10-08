@@ -1,31 +1,31 @@
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
+import { BLANKS, isBlankType } from "@/lib/printful/blanks";
 import type { ProductWithDesign } from "@/lib/queries";
 
 export function ProductCard({ product }: { product: ProductWithDesign }) {
   const img = product.mockupUrls[0] || product.design.previewUrl || "";
+  const blank = isBlankType(product.blankType) ? BLANKS[product.blankType].short : product.blankType;
   return (
-    <Link
-      href={`/product/${product.slug}`}
-      className="group rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-3 transition hover:border-[var(--accent)]"
-    >
-      <div className="checkerboard aspect-square overflow-hidden rounded-xl">
+    <Link href={`/product/${product.slug}`} className="group block">
+      <div className="garment relative aspect-square overflow-hidden border-2 border-[var(--line)] transition-colors group-hover:border-[var(--acid)]">
         {img ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={img}
             alt={product.title}
-            className="h-full w-full object-contain transition group-hover:scale-[1.03]"
+            loading="lazy"
+            className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
           />
-        ) : (
-          <div className="flex h-full items-center justify-center text-white/30">no preview</div>
-        )}
+        ) : null}
+        <span className="absolute left-2 top-2 bg-[var(--ink)] px-2 py-0.5 text-xs font-bold uppercase tracking-wide">
+          {blank}
+        </span>
       </div>
-      <div className="mt-3 flex items-center justify-between">
-        <span className="truncate text-sm font-medium">{product.title}</span>
-        <span className="text-sm text-[var(--accent-2)]">{formatPrice(product.priceCents)}</span>
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <h3 className="display line-clamp-2 text-xl group-hover:text-[var(--acid)]">{product.title}</h3>
+        <span className="price-tag shrink-0 text-lg">{formatPrice(product.priceCents)}</span>
       </div>
-      <div className="mt-1 text-xs uppercase tracking-wide text-white/40">{product.blankType}</div>
     </Link>
   );
 }

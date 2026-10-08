@@ -1,19 +1,21 @@
 import { GenerateClient } from "@/components/GenerateClient";
+import { isStyle } from "@/lib/design/styles";
 
-export const metadata = {
-  title: "Design Studio — CryptoThreads",
-};
+export const metadata = { title: "Make your own: CryptoThreads" };
 
-export default function GeneratePage() {
+export default function GeneratePage({ searchParams }: { searchParams: { q?: string; style?: string } }) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
-      <h1 className="text-3xl font-black">Design Studio</h1>
-      <p className="mt-2 max-w-2xl text-white/60">
-        Type any coin&apos;s ticker or paste its website. We pull the logo and compose a
-        print-ready design live. Add it to your cart and we&apos;ll print it on demand.
+    <div className="mx-auto max-w-7xl px-4 py-10">
+      <h1 className="display text-[clamp(3.5rem,9vw,7rem)]">Make your own</h1>
+      <p className="mt-2 max-w-xl text-[var(--dim)]">
+        Any coin, any meme. Type a ticker or paste a project&apos;s website, pick a style, and
+        watch it render. We print it after you check out.
       </p>
       <div className="mt-10">
-        <GenerateClient />
+        <GenerateClient
+          initialQuery={searchParams.q?.slice(0, 64) ?? ""}
+          initialStyle={isStyle(searchParams.style) ? searchParams.style : undefined}
+        />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { pf } from "./client";
+import type { BlankConfig } from "./blanks";
 
 export interface CatalogVariant {
   id: number;
@@ -22,6 +23,12 @@ export async function getCatalogVariants(
     if (page.length < 100) break;
   }
   return out;
+}
+
+/** Variants we list for a blank: black garments, or square stickers (not the bumper size). */
+export function sellableVariants(blank: BlankConfig, variants: CatalogVariant[]): CatalogVariant[] {
+  if (blank.format === "sticker") return variants.filter((v) => /^([\d.]+)″×\1″$/.test(v.size || ""));
+  return darkVariants(variants);
 }
 
 /**

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatPrice } from "@/lib/format";
+import { BLANK_TYPES } from "@/lib/printful/blanks";
+import { SLOGANS, STYLES } from "@/lib/design/styles";
 
 interface Product {
   id: string;
@@ -65,13 +67,15 @@ export default function AdminPage() {
   const [genQuery, setGenQuery] = useState("");
   const [genBlank, setGenBlank] = useState("tee");
   const [genMode, setGenMode] = useState("STYLIZED");
+  const [genStyle, setGenStyle] = useState("slogan");
+  const [genSlogan, setGenSlogan] = useState("hodl");
 
   async function generate() {
     setLog("generating…");
     const res = await fetch("/api/generate", {
       method: "POST",
       headers: headers(),
-      body: JSON.stringify({ query: genQuery, blankType: genBlank, mode: genMode }),
+      body: JSON.stringify({ query: genQuery, blankType: genBlank, mode: genMode, style: genStyle, slogan: genSlogan }),
     });
     const data = await res.json();
     setLog(res.ok ? `created ${data.product?.slug} (${data.product?.status})` : `error: ${data.message || data.error}`);
@@ -132,8 +136,13 @@ export default function AdminPage() {
             <div className="flex flex-wrap items-center gap-2">
               <input className={fld} placeholder="ticker or url" value={genQuery} onChange={(e) => setGenQuery(e.target.value)} />
               <select className={fld} value={genBlank} onChange={(e) => setGenBlank(e.target.value)}>
-                <option value="tee">tee</option>
-                <option value="hoodie">hoodie</option>
+                {BLANK_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <select className={fld} value={genStyle} onChange={(e) => setGenStyle(e.target.value)}>
+                {STYLES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+              <select className={fld} value={genSlogan} onChange={(e) => setGenSlogan(e.target.value)}>
+                {SLOGANS.map((s) => <option key={s.id} value={s.id}>{s.lines.join(" ")}</option>)}
               </select>
               <select className={fld} value={genMode} onChange={(e) => setGenMode(e.target.value)}>
                 <option value="STYLIZED">stylized</option>

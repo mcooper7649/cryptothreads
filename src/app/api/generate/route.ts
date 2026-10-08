@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/auth";
 import { generateProduct } from "@/lib/generate";
+import { BLANK_TYPES } from "@/lib/printful/blanks";
+import { STYLE_IDS } from "@/lib/design/styles";
 
 export const runtime = "nodejs";
 export const maxDuration = 120; // mockup generation can take a while
 
 const Body = z.object({
   query: z.string().min(1).max(128),
-  blankType: z.enum(["tee", "hoodie"]).optional(),
+  blankType: z.enum(BLANK_TYPES).optional(),
   mode: z.enum(["STYLIZED", "EXACT"]).optional(),
+  style: z.enum(STYLE_IDS).optional(),
+  slogan: z.string().max(40).optional(),
 });
 
 export async function POST(req: NextRequest) {

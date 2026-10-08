@@ -8,6 +8,8 @@ export interface CartItem {
   blankType: string;
   mode: string;
   query: string; // coin query used to (re)generate the print file at fulfillment
+  style?: string; // print style id
+  slogan?: string | null; // slogan id, for styles that print one
   size?: string;
   previewUrl: string; // data URI or stored preview
   priceCents: number;
@@ -25,7 +27,7 @@ interface CartCtx {
 }
 
 const Ctx = createContext<CartCtx | null>(null);
-const KEY = "cryptothreads.cart.v1";
+const KEY = "cryptothreads.cart.v2"; // v2 added style + slogan
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -54,7 +56,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       add: (item) =>
         setItems((prev) => {
           const id =
-            item.id ?? `${item.query}:${item.blankType}:${item.mode}:${item.size ?? ""}`;
+            item.id ??
+            [item.query, item.blankType, item.mode, item.style, item.slogan, item.size].map((x) => x ?? "").join(":");
           const existing = prev.find((p) => p.id === id);
           if (existing) {
             return prev.map((p) =>
