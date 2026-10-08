@@ -102,7 +102,7 @@ export function CheckoutClient({ open, countries, shippingCents: SHIPPING_CENTS 
           <input className={fld} placeholder="Apt, suite (optional)" value={form.address2} onChange={(e) => set("address2", e.target.value)} />
           <div className="grid grid-cols-2 gap-3">
             <input className={fld} placeholder="City" value={form.city} onChange={(e) => set("city", e.target.value)} />
-            <input className={fld} placeholder="State / region" value={form.state_code} onChange={(e) => set("state_code", e.target.value)} />
+            <input className={fld} placeholder="State (e.g. CA)" value={form.state_code} onChange={(e) => set("state_code", e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <input className={fld} placeholder="ZIP / postal" value={form.zip} onChange={(e) => set("zip", e.target.value)} />

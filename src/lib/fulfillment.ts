@@ -70,7 +70,7 @@ export async function fulfillOrder(orderId: string): Promise<void> {
     });
   }
 
-  const draft = await createDraftOrder(recipient, pfItems);
+  const draft = await createDraftOrder(recipient, pfItems, order.id);
   let status: string = "SUBMITTED";
   if (process.env.PRINTFUL_AUTO_CONFIRM === "1") {
     await confirmOrder(draft.id);

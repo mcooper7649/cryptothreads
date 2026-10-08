@@ -25,7 +25,7 @@ export interface MockupResult {
 
 function layer(req: MockupRequest) {
   return req.fileId
-    ? { type: "file", file_id: req.fileId }
+    ? { type: "file", id: req.fileId }
     : { type: "file", url: req.fileUrl };
 }
 
@@ -37,6 +37,7 @@ export async function createMockupTask(
     format: req.format ?? "png",
     products: [
       {
+        source: "catalog",
         catalog_product_id: req.catalogProductId,
         catalog_variant_ids: req.catalogVariantIds,
         ...(req.mockupStyleIds ? { mockup_style_ids: req.mockupStyleIds } : {}),
@@ -50,10 +51,12 @@ export async function createMockupTask(
       },
     ],
   };
-  return pf<MockupTaskCreated>("/mockup-tasks", {
+  // v2 returns one task per product, as an array.
+  const created = await pf<MockupTaskCreated | MockupTaskCreated[]>("/mockup-tasks", {
     method: "POST",
     body: JSON.stringify(body),
   });
+  return Array.isArray(created) ? created[0] ?? {} : created;
 }
 
 interface MockupTaskStatus {
@@ -66,7 +69,10 @@ interface MockupTaskStatus {
 }
 
 export async function getMockupTask(idOrKey: string | number): Promise<MockupTaskStatus> {
-  return pf<MockupTaskStatus>(`/mockup-tasks?id=${encodeURIComponent(String(idOrKey))}`);
+  const res = await pf<MockupTaskStatus | MockupTaskStatus[]>(
+    `/mockup-tasks?id=${encodeURIComponent(String(idOrKey))}`
+  );
+  return Array.isArray(res) ? res[0] ?? { status: "pending" } : res;
 }
 
 function flatten(status: MockupTaskStatus): MockupResult[] {

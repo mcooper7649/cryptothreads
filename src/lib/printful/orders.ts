@@ -28,7 +28,7 @@ interface OrderResponse {
 
 function itemPayload(it: OrderItemInput) {
   const layer = it.fileId
-    ? { type: "file", file_id: it.fileId }
+    ? { type: "file", id: it.fileId }
     : { type: "file", url: it.fileUrl };
   return {
     source: "catalog",
@@ -47,18 +47,21 @@ function itemPayload(it: OrderItemInput) {
 /** Create a DRAFT order (not charged/fulfilled until confirmed). */
 export async function createDraftOrder(
   recipient: Recipient,
-  items: OrderItemInput[]
+  items: OrderItemInput[],
+  externalId?: string
 ): Promise<OrderResponse> {
   return pf<OrderResponse>("/orders", {
     method: "POST",
     body: JSON.stringify({
+      // Our order id, so the Printful dashboard links back to it (max 32 chars).
+      ...(externalId ? { external_id: externalId.slice(0, 32) } : {}),
       recipient,
-      items: items.map(itemPayload),
+      order_items: items.map(itemPayload),
     }),
   });
 }
 
 /** Confirm a draft order for fulfillment (this is the billable step). */
 export async function confirmOrder(orderId: number): Promise<OrderResponse> {
-  return pf<OrderResponse>(`/orders/${orderId}/confirm`, { method: "POST" });
+  return pf<OrderResponse>(`/orders/${orderId}/confirmation`, { method: "POST" });
 }

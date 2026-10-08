@@ -50,6 +50,10 @@ export async function POST(req: NextRequest) {
   if (!checkoutOpen()) {
     return NextResponse.json({ error: "checkout closed", message: "Checkout isn't open yet." }, { status: 503 });
   }
+  // Printful needs a state/province code for these countries.
+  if (["US", "CA", "AU"].includes(shipping.country_code.toUpperCase()) && !shipping.state_code?.trim()) {
+    return NextResponse.json({ error: "state required", message: "Enter your state (for example CA or NY)." }, { status: 400 });
+  }
   if (!shipCountries().includes(shipping.country_code.toUpperCase())) {
     return NextResponse.json({ error: "country unavailable", message: "We don't ship to that country yet." }, { status: 400 });
   }

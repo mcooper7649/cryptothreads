@@ -190,7 +190,18 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
           technique: blank.technique,
           fileId: file.id,
         });
-        mockupUrls = mocks.map((m) => m.url);
+        // Printful's mockup URLs are temporary (/tmp/ on S3), so keep our own copies.
+        mockupUrls = [];
+        for (let i = 0; i < mocks.length; i++) {
+          const res = await fetch(mocks[i].url);
+          if (!res.ok) continue;
+          const stored = await putAsset(
+            `mockups/${base}-${blankType}-${mode}-${i}.png`,
+            Buffer.from(await res.arrayBuffer()),
+            "image/png"
+          );
+          mockupUrls.push(stored.url);
+        }
 
         // Retail price is fixed per blank (the same price checkout charges);
         // the Printful cost is recorded so the admin can watch margins.
