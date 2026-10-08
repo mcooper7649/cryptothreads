@@ -1,6 +1,6 @@
 # CryptoThreads
 
-Print-on-demand crypto apparel, generated from any coin's logo.
+Crypto streetwear, printed on demand. Any coin, any meme.
 
 **Live:** https://cryptothreads.mycodedojo.com
 
@@ -18,6 +18,8 @@ query ──► logo waterfall ──► render pipeline ──► storage ─�
 
 - **Logo waterfall** ([`src/lib/logo`](src/lib/logo)). Vector sources come first, then raster. The first hit is stored and cached in Postgres, so each logo is fetched once. Each query is classified as a ticker, a domain or a CoinGecko id before lookup, so `btc` and `BTC` share one cache entry.
 - **Render pipeline** ([`src/lib/design`](src/lib/design)). Designs are React components rendered to SVG with satori, then rasterized by resvg at 300 DPI on a transparent background. The accent color is pulled from the logo's dominant colors with sharp. The live preview rasterizes the same SVG at 900px, about 25× cheaper, with a per-IP rate limit and a small cache.
+- **Seven print styles + a meme library** ([`styles.ts`](src/lib/design/styles.ts), [`templates-street.tsx`](src/lib/design/templates-street.tsx)): ticker, box logo, stacked meme slogan, pump chart (seeded candlesticks per coin), trade receipt, club stamp (text set around a circle glyph by glyph), and 8-bit (pixel rocket as a crisp-edged SVG). Slogans include coin in-jokes offered only for their coin. `npx tsx scripts/style-gallery.mts` renders every style for a few coins onto one contact sheet.
+- **Six blanks** ([`blanks.ts`](src/lib/printful/blanks.ts)): classic tee, oversized boxy tee, long sleeve, crewneck, hoodie (all black, DTG front print) and kiss-cut stickers, whose art is trimmed and set on a black rounded backing because stickers are white vinyl.
 - **Two design modes.** **Stylized** (the default) makes the ticker the hero, with the logo as a small badge. **Exact logo** prints the logo itself, and only for projects on an admin allowlist. Others quietly fall back to stylized, which keeps trademark risk low. Every product has a kill switch, and the [IP & takedown policy](src/app/policy/ip/page.tsx) is linked in the footer.
 - **Payments → fulfillment** ([`src/lib/fulfillment.ts`](src/lib/fulfillment.ts)). Checkout recomputes prices on the server and opens a Stripe Checkout session, which takes cards and wallets plus stablecoins (USDC, USDP, USDG on Ethereum, Base, Polygon and Solana) through Stripe's crypto payment method. The signed webhook marks the order paid only once the session is paid. It then re-renders the exact print file, maps blank + size to a Printful catalog variant (always a dark garment, since designs are light-on-dark), and creates a Printful order. Orders stay drafts unless `PRINTFUL_AUTO_CONFIRM=1`. Fulfillment is idempotent.
 - **Daily drops** ([`scripts/daily-routine.md`](scripts/daily-routine.md)). A scheduled Claude agent picks trending coins from CoinGecko, generates products through the admin API and writes a short post about them. [`scripts/daily-drop.mts`](scripts/daily-drop.mts) is the deterministic fallback.

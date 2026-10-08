@@ -11,6 +11,15 @@ import { getTrendingCoins } from "../src/lib/trending";
 import { generateProduct } from "../src/lib/generate";
 import { prisma } from "../src/lib/db";
 import { formatPrice } from "../src/lib/format";
+import { STYLES, slogansFor } from "../src/lib/design/styles";
+import { BLANK_TYPES } from "../src/lib/printful/blanks";
+
+/** Pick an element deterministically from the date + coin, so reruns make the same drop. */
+function pick<T>(list: readonly T[], key: string): T {
+  let h = 0;
+  for (const c of key) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return list[h % list.length];
+}
 
 const COUNT = parseInt(process.env.DAILY_DROP_COUNT || "2", 10);
 
@@ -30,13 +39,22 @@ async function main() {
   const made: { symbol: string; name: string; slug: string; priceCents: number }[] = [];
   for (const coin of trending) {
     try {
-      const product = await generateProduct({
-        query: coin.symbol || coin.id,
-        blankType: "tee",
-        mode: "STYLIZED",
-      });
-      made.push({ symbol: coin.symbol, name: coin.name, slug: product.slug, priceCents: product.priceCents });
-      console.log("generated", product.slug, product.status);
+      // Two pieces per coin: a meme tee plus a random style on a random blank.
+      const day = process.env.DROP_DATE || new Date().toISOString().slice(0, 10);
+      const slogans = slogansFor(coin.symbol);
+      const combos = [
+        { style: "slogan" as const, blankType: "tee" as const, slogan: pick(slogans, `${day}${coin.symbol}a`).id },
+        {
+          style: pick(STYLES.filter((x) => x.id !== "slogan"), `${day}${coin.symbol}b`).id,
+          blankType: pick(BLANK_TYPES, `${day}${coin.symbol}c`),
+          slogan: pick(slogans, `${day}${coin.symbol}d`).id,
+        },
+      ];
+      for (const c of combos) {
+        const product = await generateProduct({ query: coin.symbol || coin.id, mode: "STYLIZED", ...c });
+        made.push({ symbol: coin.symbol, name: coin.name, slug: product.slug, priceCents: product.priceCents });
+        console.log("generated", product.slug, product.status);
+      }
     } catch (e) {
       console.error("failed to generate for", coin.symbol, e);
     }

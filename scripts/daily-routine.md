@@ -17,7 +17,11 @@ genuinely useful blog post about them.
    2–3 by `market_cap_rank`. Skip anything obviously NSFW or a known scam.
 2. **Generate products.** For each coin, call:
    `POST {SITE}/api/generate`  `Authorization: Bearer {ADMIN_TOKEN}`
-   `{ "query": "<SYMBOL>", "blankType": "tee", "mode": "STYLIZED" }`
+   `{ "query": "<SYMBOL>", "blankType": "<blank>", "mode": "STYLIZED", "style": "<style>", "slogan": "<slogan>" }`
+   Make 2–3 pieces per coin and vary them: at least one `slogan` (meme) tee, plus other
+   styles on other blanks. Styles: ticker, box, slogan, chart, receipt, stamp, pixel.
+   Blanks: tee, boxy, longsleeve, crewneck, hoodie, sticker. Slogan ids are in
+   `src/lib/design/styles.ts` (coin in-jokes like `such-wow` only for their coin).
    Capture each returned `product.slug` and `priceCents`.
 3. **Write the post.** Compose ~150–250 words of *real* commentary: what the project
    does, why it's trending today (price move, news, launch), and a line about the drop.
