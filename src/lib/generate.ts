@@ -205,7 +205,9 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
 
         // Retail price is fixed per blank (the same price checkout charges);
         // the Printful cost is recorded so the admin can watch margins.
-        const cost = await getVariantBasePrice(variantIds[0], blank.technique);
+        // Record the cost of a typical size (M) rather than whichever variant is listed first.
+        const typical = chosen.find((v) => v.size === "M") ?? chosen[0];
+        const cost = await getVariantBasePrice(typical.id, blank.technique);
         if (cost != null) baseCostCents = Math.round(cost * 100);
         variants = chosen.map((v) => ({
           variantId: v.id,

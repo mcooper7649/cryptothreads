@@ -34,14 +34,30 @@ function authHeaders(): HeadersInit {
   return h;
 }
 
+/** Seconds to wait from a 429, via Retry-After or "try again after N seconds". */
+function retryAfterSeconds(res: Response, text: string): number {
+  const header = parseInt(res.headers.get("retry-after") || "", 10);
+  if (Number.isFinite(header)) return header;
+  const m = text.match(/after (\d+) seconds/i);
+  return m ? parseInt(m[1], 10) : 30;
+}
+
 export async function pf<T = any>(
   path: string,
-  init: RequestInit = {}
+  init: RequestInit = {},
+  retries = 2
 ): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: { ...authHeaders(), ...(init.headers || {}) },
   });
+
+  // Mockup tasks are rate limited to a few per minute; wait it out rather than fail.
+  if (res.status === 429 && retries > 0) {
+    const wait = Math.min(retryAfterSeconds(res, await res.text()), 90);
+    await new Promise((r) => setTimeout(r, (wait + 1) * 1000));
+    return pf<T>(path, init, retries - 1);
+  }
 
   const text = await res.text();
   let json: any = undefined;
