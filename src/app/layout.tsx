@@ -5,17 +5,31 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Marquee } from "@/components/Marquee";
 import { CartProvider } from "@/components/CartProvider";
-import { isTestMode } from "@/lib/store-config";
+import { isTestMode, siteUrl } from "@/lib/store-config";
 
 const display = Anton({ weight: "400", subsets: ["latin"], variable: "--font-display" });
 const body = Archivo({ subsets: ["latin"], variable: "--font-body" });
 const marker = Permanent_Marker({ weight: "400", subsets: ["latin"], variable: "--font-marker" });
 
-export const metadata: Metadata = {
-  title: "CryptoThreads: crypto streetwear, printed on demand",
-  description:
-    "Any coin, any meme. Tees, hoodies, crewnecks and stickers made from your coin's logo, printed on demand. Pay by card or USDC.",
-};
+const description =
+  "Any coin, any meme. Tees, hoodies, crewnecks and stickers made from your coin's logo, printed on demand. Pay by card or USDC.";
+
+// generateMetadata so metadataBase follows the runtime SITE_URL.
+export function generateMetadata(): Metadata {
+  return {
+    title: "CryptoThreads: crypto streetwear, printed on demand",
+    description,
+    metadataBase: new URL(siteUrl()),
+    openGraph: {
+      type: "website",
+      siteName: "CryptoThreads",
+      title: "CryptoThreads: crypto streetwear, printed on demand",
+      description,
+      images: [{ url: "/og.jpg", width: 1200, height: 627, alt: "CryptoThreads: Number go up." }],
+    },
+    twitter: { card: "summary_large_image" },
+  };
+}
 
 // The test-mode banner reads env at request time.
 export const dynamic = "force-dynamic";
