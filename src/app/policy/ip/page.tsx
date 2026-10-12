@@ -1,6 +1,6 @@
 import { supportEmail } from "@/lib/store-config";
 
-export const metadata = { title: "IP & Takedown Policy: CryptoThreads" };
+export const metadata = { title: "IP & takedown policy", alternates: { canonical: "/policy/ip" } };
 export const dynamic = "force-dynamic";
 
 export default function IpPolicy() {

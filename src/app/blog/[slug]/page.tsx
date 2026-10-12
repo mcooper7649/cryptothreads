@@ -1,7 +1,20 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getPostBySlug } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const post = await getPostBySlug(params.slug);
+  if (!post) return { title: "Not found", robots: { index: false } };
+  const description = post.excerpt ?? post.bodyMdx.replace(/[#*_>`]/g, "").slice(0, 155);
+  return {
+    title: post.title,
+    description,
+    alternates: { canonical: `/blog/${post.slug}` },
+    openGraph: { type: "article", title: post.title, description, publishedTime: post.publishedAt.toISOString() },
+  };
+}
 
 export default async function BlogPost({
   params,

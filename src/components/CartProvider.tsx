@@ -53,7 +53,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       items,
       count: items.reduce((s, i) => s + i.qty, 0),
       subtotalCents,
-      add: (item) =>
+      add: (item) => {
+        // Add-to-cart signal for ranking; fire-and-forget.
+        fetch("/api/signal", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ kind: "carts", query: item.query, blankType: item.blankType, style: item.style, slogan: item.slogan }),
+          keepalive: true,
+        }).catch(() => undefined);
         setItems((prev) => {
           const id =
             item.id ??
@@ -65,7 +72,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             );
           }
           return [...prev, { ...item, id, qty: item.qty ?? 1 }];
-        }),
+        });
+      },
       remove: (id) => setItems((prev) => prev.filter((p) => p.id !== id)),
       setQty: (id, qty) =>
         setItems((prev) =>

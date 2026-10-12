@@ -95,6 +95,12 @@ model Product {
   baseCostCents     Int           @default(0)
   priceCents        Int           @default(0)
   status            ProductStatus @default(DRAFT)
+  /// Engagement, for ranking: page views, add-to-carts, paid orders.
+  views             Int           @default(0)
+  carts             Int           @default(0)
+  orders            Int           @default(0)
+  /// Set when the freshness check pulled it (coin went quiet); cleared when it comes back.
+  retiredReason     String?
   createdAt         DateTime      @default(now())
 }
 
@@ -152,8 +158,48 @@ model TrendingSlogan {
   score      Float    @default(0)
   previewUrl String?
   hidden     Boolean  @default(false) // admin kill switch; blocks new orders too
+  /// Proven seller: stays in the studio after it expires from the home page.
+  pinned     Boolean  @default(false)
+  views      Int      @default(0)
+  carts      Int      @default(0)
+  orders     Int      @default(0)
+  /// Likes on its @FloorFeed post, read back by the collector.
+  likes      Int      @default(0)
+  tweetUrl   String?
   createdAt  DateTime @default(now())
   expiresAt  DateTime
 
   @@index([expiresAt])
+}
+
+enum SubmissionStatus {
+  LIVE // on the board, open for votes
+  PROMOTED // made it into the trending set
+  HIDDEN // admin pulled it
+}
+
+/// "Shill us yours": coin + slogan ideas from shoppers, voted on at /shill.
+model Submission {
+  id        String           @id @default(cuid())
+  lines     String[]
+  ticker    String
+  ipHash    String
+  votes     Int              @default(0)
+  status    SubmissionStatus @default(LIVE)
+  /// TrendingSlogan id once promoted.
+  sloganId  String?
+  createdAt DateTime         @default(now())
+
+  ballots Vote[]
+
+  @@index([status, votes])
+}
+
+model Vote {
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId String
+  voterHash    String
+  createdAt    DateTime   @default(now())
+
+  @@id([submissionId, voterHash])
 }

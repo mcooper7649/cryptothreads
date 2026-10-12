@@ -5,9 +5,15 @@ import { STYLES, isStyle } from "@/lib/design/styles";
 import { BLANKS, BLANK_TYPES, isBlankType } from "@/lib/printful/blanks";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Shop: CryptoThreads" };
+export const metadata = {
+  title: "Shop crypto shirts, hoodies & stickers",
+  description:
+    "Crypto streetwear for BTC, ETH, SOL, DOGE and more: meme tees, hoodies, crewnecks and stickers, printed on demand. Pay by card or USDC.",
+  // Filtered views are the same catalog; coin pages (/coin/X) are the indexable per-coin version.
+  alternates: { canonical: "/shop" },
+};
 
-type Params = { type?: string; style?: string; coin?: string };
+type Params = { type?: string; style?: string; coin?: string; sort?: string };
 
 /** Build a shop URL that changes one filter and keeps the others. */
 function href(current: Params, change: Params) {
@@ -30,9 +36,10 @@ export default async function Shop({ searchParams }: { searchParams: Params }) {
     type: isBlankType(searchParams.type) ? searchParams.type : undefined,
     style: isStyle(searchParams.style) ? searchParams.style : undefined,
     coin: searchParams.coin?.toUpperCase().slice(0, 16) || undefined,
+    sort: searchParams.sort === "new" ? "new" : undefined, // default: hot
   };
   const [products, coins] = await Promise.all([
-    getActiveProducts(120, { blankType: current.type, style: current.style, coin: current.coin }),
+    getActiveProducts(120, { blankType: current.type, style: current.style, coin: current.coin, sort: current.sort === "new" ? "new" : "hot" }),
     getActiveCoins(),
   ]);
   const filtered = Boolean(current.type || current.style || current.coin);
@@ -47,6 +54,11 @@ export default async function Shop({ searchParams }: { searchParams: Params }) {
       </p>
 
       <div className="mt-8 space-y-4 border-y-2 border-[var(--line)] py-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="label mb-0 mr-2 w-16">Sort</span>
+          <Chip to={href(current, { sort: undefined })} on={!current.sort}>Hot</Chip>
+          <Chip to={href(current, { sort: "new" })} on={current.sort === "new"}>Newest</Chip>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="label mb-0 mr-2 w-16">Type</span>
           <Chip to={href(current, { type: undefined })} on={!current.type}>All</Chip>

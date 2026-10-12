@@ -1,21 +1,38 @@
 # Trend collector
 
-`collect.py` fills the storefront's **Trending** section. Once a day it:
+`collect.py` keeps the storefront fresh. Three times a day it:
 
 1. reads crypto X (finance trends + top posts for a few searches, through the saved
-   session in `X_STATE`, read-only) and the day's top posts on crypto subreddits (RSS),
-   plus CoinGecko's trending coins;
-2. asks the local Ollama model (`qwen2.5:14b-instruct` on the GPU VM) for ~12 short
-   slogans in the house voice;
-3. posts them to `POST /api/admin/trending`, which runs `src/lib/trend-filter.ts`
-   (length, glyphs, brands, people, politics, slurs, duplicates), renders a preview
-   and **publishes immediately** for 7 days. A slogan seen again gets its expiry extended.
+   session in `X_STATE`, read-only), the top posts on crypto subreddits (RSS), crypto
+   Polymarket's busiest non-price markets, CoinGecko's trending coins, and GeckoTerminal's
+   trending DEX pools (only coins with ≥ $150k liquidity, ≥ $1M 24h volume and ≥ 1 day old);
+2. asks Claude (`TRENDS_MODEL`, default `claude-opus-5-5`, low effort, refusal fallbacks
+   on) for ~20 slogans in the house voice. Without `ANTHROPIC_API_KEY` it falls back to
+   the local Ollama model (`TRENDS_OLLAMA_MODEL`, default `qwen2.5:14b-instruct`);
+3. posts the ones the writer rates ≥ 6 (up to 8) to `POST /api/admin/trending`, which runs
+   `src/lib/trend-filter.ts` (length, glyphs, brands, people, politics, slurs, duplicates;
+   tickers too), renders a preview and **publishes immediately** for 4 days. A slogan seen
+   again gets its expiry extended. Tickers from the vetted lists (CoinGecko, DEX, majors)
+   print type-only when no logo resolves;
+4. hands the best new one to FloorFeed's X poster (`POST /social/draft`, kind `merch`,
+   one a day at most) so it goes out on @FloorFeed;
+5. reads likes off the last week's @FloorFeed drop posts and sends them to
+   `POST /api/admin/maintain`, which also: publishes calendar designs
+   (`src/lib/events.ts`), pins proven sellers (≥ 1 order, ≥ 3 carts or ≥ 25 likes) so
+   they stay in the studio, ends duds early (≥ 40 views, no carts after 48h), retires
+   coin products whose 24h volume drops under $2M (back above $4M → back in the shop),
+   and prints community ideas that reached 5 votes.
 
-Hide anything bad in `/admin` → *Trending memes*. Hidden slogans disappear from the
-site and can't be checked out; orders already paid still print what was bought.
+Hide anything bad in `/admin` (*Trending memes*, *Shill board*). Hidden slogans disappear
+from the site and can't be checked out; orders already paid still print what was bought.
 
-Cron on the homelab (needs Playwright, so it uses the world-monitor venv):
+Settings come from the environment or the app's `.env`: `ADMIN_TOKEN`, `ANTHROPIC_API_KEY`,
+`FLOORFEED_SOCIAL_TOKEN` (same value as FloorFeed's `SOCIAL_TOKEN`; cross-posting and likes
+are skipped without it), `SITE_URL`.
 
-    15 14 * * * cd ~/cryptothreads && X_STATE=~/world-monitor/storage_state.json flock -w 600 /tmp/x_post.lock ~/world-monitor/venv/bin/python3 tools/trends/collect.py >> ~/cryptothreads/.data/trends.log 2>&1
+Cron on the homelab (needs Playwright and the `anthropic` package, so it uses the
+world-monitor venv; shares the X lock with the FloorFeed poster):
 
-`--dry-run` prints the candidates without publishing.
+    15 2,14,20 * * * cd ~/cryptothreads && X_STATE=~/world-monitor/storage_state.json flock -w 600 /tmp/x_post.lock ~/world-monitor/venv/bin/python3 tools/trends/collect.py >> ~/cryptothreads/.data/trends.log 2>&1
+
+`--dry-run` prints the candidates without publishing anything.

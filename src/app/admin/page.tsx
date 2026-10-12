@@ -13,6 +13,18 @@ interface Product {
   status: string;
   priceCents: number;
   mockupUrls: string[];
+  views: number;
+  carts: number;
+  orders: number;
+  retiredReason: string | null;
+}
+interface Submission {
+  id: string;
+  lines: string[];
+  ticker: string;
+  votes: number;
+  status: string;
+  sloganId: string | null;
 }
 interface AllowEntry {
   id: string;
@@ -30,6 +42,12 @@ interface TrendEntry {
   source: string;
   previewUrl: string | null;
   hidden: boolean;
+  pinned: boolean;
+  views: number;
+  carts: number;
+  orders: number;
+  likes: number;
+  tweetUrl: string | null;
   expiresAt: string;
 }
 
@@ -39,6 +57,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [allow, setAllow] = useState<AllowEntry[]>([]);
   const [trends, setTrends] = useState<TrendEntry[]>([]);
+  const [subs, setSubs] = useState<Submission[]>([]);
   const [log, setLog] = useState<string>("");
 
   useEffect(() => {
@@ -53,10 +72,11 @@ export default function AdminPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const [p, a, t] = await Promise.all([
+      const [p, a, t, c] = await Promise.all([
         fetch("/api/admin/products", { headers: headers() }),
         fetch("/api/admin/allowlist", { headers: headers() }),
         fetch("/api/admin/trending", { headers: headers() }),
+        fetch("/api/admin/community", { headers: headers() }),
       ]);
       if (p.status === 401 || a.status === 401) {
         setAuthed(false);
@@ -66,6 +86,7 @@ export default function AdminPage() {
       setProducts((await p.json()).products ?? []);
       setAllow((await a.json()).entries ?? []);
       setTrends(t.ok ? (await t.json()).entries ?? [] : []);
+      setSubs(c.ok ? (await c.json()).entries ?? [] : []);
       setAuthed(true);
     } catch {
       setLog("network error");
@@ -105,8 +126,14 @@ export default function AdminPage() {
     refresh();
   }
 
-  async function setHidden(id: string, hidden: boolean) {
-    await fetch("/api/admin/trending", { method: "PATCH", headers: headers(), body: JSON.stringify({ id, hidden }) });
+  async function patchTrend(id: string, patch: { hidden?: boolean; pinned?: boolean }) {
+    await fetch("/api/admin/trending", { method: "PATCH", headers: headers(), body: JSON.stringify({ id, ...patch }) });
+    refresh();
+  }
+
+  async function moderate(id: string, action: "hide" | "unhide" | "promote") {
+    const res = await fetch("/api/admin/community", { method: "PATCH", headers: headers(), body: JSON.stringify({ id, action }) });
+    if (!res.ok) setLog(`community ${action}: ${(await res.json().catch(() => ({}))).error ?? res.status}`);
     refresh();
   }
 
@@ -186,11 +213,21 @@ export default function AdminPage() {
                     <div className="min-w-0 flex-1">
                       <div className={`truncate ${t.hidden ? "line-through text-white/40" : ""}`}>{t.lines.join(" / ")}</div>
                       <div className="truncate text-xs text-white/40">
-                        ${t.ticker} · {t.style} · {t.source} · {t.hidden ? "hidden" : expired ? "expired" : `until ${new Date(t.expiresAt).toLocaleDateString()}`} · {t.blurb}
+                        {t.ticker} · {t.style} · {t.source} · {t.hidden ? "hidden" : expired ? (t.pinned ? "expired, pinned in studio" : "expired") : `until ${new Date(t.expiresAt).toLocaleDateString()}`} · {t.blurb}
+                      </div>
+                      <div className="text-xs text-white/40">
+                        {t.views} views · {t.carts} carts · {t.orders} orders · {t.likes} likes
+                        {t.tweetUrl && <> · <a href={t.tweetUrl} target="_blank" rel="noreferrer" className="underline">post</a></>}
                       </div>
                     </div>
                     <button
-                      onClick={() => setHidden(t.id, !t.hidden)}
+                      onClick={() => patchTrend(t.id, { pinned: !t.pinned })}
+                      className={`shrink-0 rounded px-2 py-1 text-xs ${t.pinned ? "bg-[var(--accent)]" : "border border-[var(--border)] hover:border-white/40"}`}
+                    >
+                      {t.pinned ? "Pinned" : "Pin"}
+                    </button>
+                    <button
+                      onClick={() => patchTrend(t.id, { hidden: !t.hidden })}
                       className={`shrink-0 rounded px-2 py-1 text-xs ${t.hidden ? "border border-[var(--border)] hover:border-white/40" : "bg-red-600"}`}
                     >
                       {t.hidden ? "Unhide" : "Hide"}
@@ -198,7 +235,34 @@ export default function AdminPage() {
                   </div>
                 );
               })}
-              {!trends.length && <div className="text-white/40">Nothing yet. The collector runs daily.</div>}
+              {!trends.length && <div className="text-white/40">Nothing yet. The collector runs three times a day.</div>}
+            </div>
+          </section>
+
+          {/* Community board: auto-filtered, printed at 5 votes; hide anything that slipped through */}
+          <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-3 font-bold">Shill board ({subs.filter((s) => s.status === "LIVE").length} open)</h2>
+            <div className="space-y-2 text-sm">
+              {subs.map((s) => (
+                <div key={s.id} className="flex items-center gap-3 border-b border-[var(--border)] py-2">
+                  <div className="min-w-0 flex-1">
+                    <div className={`truncate ${s.status === "HIDDEN" ? "line-through text-white/40" : ""}`}>{s.lines.join(" / ")}</div>
+                    <div className="text-xs text-white/40">{s.ticker} · {s.votes} votes · {s.status.toLowerCase()}</div>
+                  </div>
+                  {s.status === "LIVE" && (
+                    <button onClick={() => moderate(s.id, "promote")} className="shrink-0 rounded border border-[var(--border)] px-2 py-1 text-xs hover:border-white/40">
+                      Print now
+                    </button>
+                  )}
+                  <button
+                    onClick={() => moderate(s.id, s.status === "HIDDEN" ? "unhide" : "hide")}
+                    className={`shrink-0 rounded px-2 py-1 text-xs ${s.status === "HIDDEN" ? "border border-[var(--border)] hover:border-white/40" : "bg-red-600"}`}
+                  >
+                    {s.status === "HIDDEN" ? "Unhide" : "Hide"}
+                  </button>
+                </div>
+              ))}
+              {!subs.length && <div className="text-white/40">No ideas yet.</div>}
             </div>
           </section>
 
@@ -229,7 +293,10 @@ export default function AdminPage() {
                 <div key={p.id} className="flex items-center justify-between border-b border-[var(--border)] py-2">
                   <div className="min-w-0">
                     <div className="truncate">{p.title}</div>
-                    <div className="text-xs text-white/40">{p.blankType} · {formatPrice(p.priceCents)} · {p.status}</div>
+                    <div className="text-xs text-white/40">
+                      {p.blankType} · {formatPrice(p.priceCents)} · {p.status} · {p.views} views · {p.carts} carts · {p.orders} orders
+                      {p.retiredReason && <> · auto-retired: {p.retiredReason}</>}
+                    </div>
                   </div>
                   <div className="flex gap-1">
                     {["ACTIVE", "DRAFT", "DISABLED"].map((s) => (

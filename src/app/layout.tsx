@@ -17,9 +17,13 @@ const description =
 // generateMetadata so metadataBase follows the runtime SITE_URL.
 export function generateMetadata(): Metadata {
   return {
-    title: "CryptoThreads: crypto streetwear, printed on demand",
+    title: { default: "CryptoThreads: crypto streetwear, printed on demand", template: "%s | CryptoThreads" },
     description,
+    applicationName: "CryptoThreads",
+    keywords: ["crypto shirts", "crypto merch", "bitcoin shirt", "memecoin merch", "crypto hoodie", "crypto stickers", "print on demand"],
     metadataBase: new URL(siteUrl()),
+    robots: { index: true, follow: true, "max-image-preview": "large" },
+    ...(process.env.GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } } : {}),
     openGraph: {
       type: "website",
       siteName: "CryptoThreads",

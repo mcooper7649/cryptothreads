@@ -1,7 +1,7 @@
 import { formatPrice } from "@/lib/format";
 import { shipCountries, shippingCents, supportEmail } from "@/lib/store-config";
 
-export const metadata = { title: "Shipping & Returns — CryptoThreads" };
+export const metadata = { title: "Shipping & returns", alternates: { canonical: "/policy/shipping" } };
 export const dynamic = "force-dynamic";
 
 export default function ShippingPolicy() {

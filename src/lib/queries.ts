@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Product, Design, LogoCache, ContentPost } from "@prisma/client";
+import { productHeat } from "@/lib/signals";
 
 export type ProductWithDesign = Product & { design: Design & { logo: LogoCache } };
 
@@ -12,11 +13,13 @@ export interface ProductFilter {
   blankType?: string;
   style?: string;
   coin?: string;
+  /** "hot" ranks by sales, carts and views (with a boost while new); default is newest first. */
+  sort?: "new" | "hot";
 }
 
 export async function getActiveProducts(limit = 24, f: ProductFilter = {}): Promise<ProductWithDesign[]> {
   try {
-    return await prisma.product.findMany({
+    const rows = await prisma.product.findMany({
       where: {
         status: "ACTIVE",
         ...(f.blankType ? { blankType: f.blankType } : {}),
@@ -25,8 +28,12 @@ export async function getActiveProducts(limit = 24, f: ProductFilter = {}): Prom
       },
       include: { design: { include: { logo: true } } },
       orderBy: { createdAt: "desc" },
-      take: limit,
+      // The catalog is small; rank the whole of it in memory for "hot".
+      take: f.sort === "hot" ? undefined : limit,
     });
+    if (f.sort !== "hot") return rows;
+    const now = Date.now();
+    return rows.sort((a, b) => productHeat(b, now) - productHeat(a, now)).slice(0, limit);
   } catch {
     return [];
   }

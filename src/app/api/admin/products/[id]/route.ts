@@ -21,7 +21,8 @@ export async function PATCH(
   }
   const product = await prisma.product.update({
     where: { id: params.id },
-    data: { status: parsed.data.status },
+    // A manual call overrides the freshness check, so it won't auto-revive this one.
+    data: { status: parsed.data.status, retiredReason: null },
   });
   return NextResponse.json({ product });
 }

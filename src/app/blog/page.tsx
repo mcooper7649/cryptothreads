@@ -2,7 +2,11 @@ import Link from "next/link";
 import { getRecentPosts } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Drops: CryptoThreads" };
+export const metadata = {
+  title: "Drops",
+  description: "Every CryptoThreads drop: new coins, new memes and new designs, as they land.",
+  alternates: { canonical: "/blog" },
+};
 
 export default async function BlogIndex() {
   const posts = await getRecentPosts(50);

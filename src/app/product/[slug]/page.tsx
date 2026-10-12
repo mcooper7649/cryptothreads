@@ -1,4 +1,7 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { JsonLd } from "@/components/JsonLd";
+import { abs, dollars, onSite, SITE_NAME } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/lib/queries";
 import { AddToCart } from "@/components/AddToCart";
@@ -7,6 +10,8 @@ import { formatPrice } from "@/lib/format";
 import { BLANKS, isBlankType, sizeRank } from "@/lib/printful/blanks";
 import { STYLES } from "@/lib/design/styles";
 import { findSlogan } from "@/lib/slogans";
+import { headers } from "next/headers";
+import { bumpProduct, isBot } from "@/lib/signals";
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +21,29 @@ interface Variant {
   color?: string;
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const product = await getProductBySlug(params.slug);
-  return { title: product ? `${product.title}: CryptoThreads` : "CryptoThreads" };
+  if (!product || product.status !== "ACTIVE") return { title: "Not found", robots: { index: false } };
+  const blank = isBlankType(product.blankType) ? BLANKS[product.blankType] : null;
+  const coin = product.design.logo.name ?? (product.query ?? "").toUpperCase();
+  const description =
+    `${product.title}: ${coin} ${blank?.format === "sticker" ? "vinyl sticker" : `${(blank?.label ?? "shirt").toLowerCase()} on black`}, ` +
+    `printed on demand for ${formatPrice(product.priceCents)}. Ships in the US for a flat $5. Pay by card or USDC.`;
+  const image = onSite(product.mockupUrls[0] ?? product.design.previewUrl);
+  return {
+    title: product.title,
+    description,
+    alternates: { canonical: `/product/${product.slug}` },
+    openGraph: { type: "website", title: product.title, description, url: `/product/${product.slug}`, ...(image ? { images: [{ url: image, alt: product.title }] } : {}) },
+    twitter: { card: "summary_large_image", title: product.title, description, ...(image ? { images: [image] } : {}) },
+  };
 }
 
 export default async function ProductPage({ params }: { params: { slug: string } }) {
   const product = await getProductBySlug(params.slug);
   if (!product || product.status !== "ACTIVE") notFound();
   const related = await getRelatedProducts(product);
+  if (!isBot(headers().get("user-agent"))) void bumpProduct(product.id, "views");
 
   const variants = (product.variants as unknown as Variant[]) ?? [];
   const sizes = Array.from(new Set(variants.map((v) => v.size).filter((s): s is string => !!s))).sort(
@@ -39,11 +58,53 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Product",
+              name: product.title,
+              url: abs(`/product/${product.slug}`),
+              image: images.map((u) => onSite(u)),
+              description: `${product.title}, printed on demand on a black ${blank?.label.toLowerCase() ?? "garment"}.`,
+              brand: { "@type": "Brand", name: SITE_NAME },
+              category: blank?.format === "sticker" ? "Stickers" : "Apparel",
+              offers: {
+                "@type": "Offer",
+                url: abs(`/product/${product.slug}`),
+                priceCurrency: "USD",
+                price: dollars(product.priceCents),
+                availability: "https://schema.org/InStock",
+                itemCondition: "https://schema.org/NewCondition",
+                shippingDetails: {
+                  "@type": "OfferShippingDetails",
+                  shippingRate: { "@type": "MonetaryAmount", value: "5.00", currency: "USD" },
+                  shippingDestination: { "@type": "DefinedRegion", addressCountry: "US" },
+                  deliveryTime: {
+                    "@type": "ShippingDeliveryTime",
+                    handlingTime: { "@type": "QuantitativeValue", minValue: 2, maxValue: 5, unitCode: "DAY" },
+                    transitTime: { "@type": "QuantitativeValue", minValue: 3, maxValue: 7, unitCode: "DAY" },
+                  },
+                },
+              },
+            },
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "Shop", item: abs("/shop") },
+                { "@type": "ListItem", position: 2, name: query.toUpperCase(), item: abs(`/coin/${encodeURIComponent(query.toUpperCase())}`) },
+                { "@type": "ListItem", position: 3, name: product.title, item: abs(`/product/${product.slug}`) },
+              ],
+            },
+          ],
+        }}
+      />
       <nav className="mb-6 text-sm text-[var(--dim)]">
         <Link href="/shop" className="hover:text-[var(--acid)]">Shop</Link>
         {" / "}
-        <Link href={`/shop?coin=${encodeURIComponent(query.toUpperCase())}`} className="hover:text-[var(--acid)]">
-          ${query.toUpperCase()}
+        <Link href={`/coin/${encodeURIComponent(query.toUpperCase())}`} className="hover:text-[var(--acid)]">
+          {query.toUpperCase()}
         </Link>
       </nav>
       <div className="grid gap-10 md:grid-cols-2">
@@ -110,7 +171,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       {related.length > 0 && (
         <section className="mt-20">
           <h2 className="display mb-6 border-b-2 border-[var(--line)] pb-4 text-4xl sm:text-5xl">
-            More ${query.toUpperCase()}
+            More {query.toUpperCase()}
           </h2>
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
             {related.map((p) => (

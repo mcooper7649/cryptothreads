@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { DEFAULT_SLOGAN, SLOGANS, getSlogan, type Slogan } from "@/lib/design/styles";
 import type { TrendingSlogan } from "@prisma/client";
+import { sloganHeat } from "@/lib/signals";
 
 /** Trending slogan ids start with this; library ids never do. */
 export const TRENDING_PREFIX = "t-";
@@ -22,13 +23,15 @@ export async function resolveSlogan(id: string | null | undefined): Promise<Slog
   return (await findSlogan(id ?? DEFAULT_SLOGAN)) ?? getSlogan(DEFAULT_SLOGAN);
 }
 
-/** Live trending slogans, best first. Empty (not an error) when the DB is unreachable. */
-export async function getTrending(limit = 12): Promise<TrendingSlogan[]> {
-  return prisma.trendingSlogan
-    .findMany({
-      where: { hidden: false, expiresAt: { gt: new Date() } },
-      orderBy: [{ score: "desc" }, { createdAt: "desc" }],
-      take: limit,
-    })
-    .catch(() => []);
+/**
+ * Live trending slogans, hottest first (writer score plus shopper and X
+ * signals). `withPinned` adds proven sellers that have expired, for the studio.
+ * Empty (not an error) when the DB is unreachable.
+ */
+export async function getTrending(limit = 12, withPinned = false): Promise<TrendingSlogan[]> {
+  const live = { expiresAt: { gt: new Date() } };
+  const rows = await prisma.trendingSlogan
+    .findMany({ where: { hidden: false, ...(withPinned ? { OR: [live, { pinned: true }] } : live) } })
+    .catch(() => [] as TrendingSlogan[]);
+  return rows.sort((a, b) => sloganHeat(b) - sloganHeat(a)).slice(0, limit);
 }

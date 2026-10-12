@@ -17,6 +17,10 @@ export async function GET(req: NextRequest) {
       status: true,
       priceCents: true,
       mockupUrls: true,
+      views: true,
+      carts: true,
+      orders: true,
+      retiredReason: true,
     },
   });
   return NextResponse.json({ products });

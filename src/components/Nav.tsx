@@ -7,6 +7,7 @@ import { useCart } from "./CartProvider";
 const LINKS = [
   { href: "/shop", label: "Shop" },
   { href: "/generate", label: "Make your own" },
+  { href: "/shill", label: "Shill us" },
   { href: "/blog", label: "Drops" },
 ];
 

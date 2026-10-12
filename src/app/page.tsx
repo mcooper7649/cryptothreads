@@ -7,11 +7,15 @@ import { formatPrice } from "@/lib/format";
 import { TIMELINE, TIMELINE_AS_OF } from "@/lib/timeline";
 import { getSlogan } from "@/lib/design/styles";
 import { getTrending } from "@/lib/slogans";
+import { upcomingEvents } from "@/lib/events";
+import { JsonLd } from "@/components/JsonLd";
+import { abs, SITE_NAME } from "@/lib/seo";
 
 /** Asset URLs are stored absolute (SITE_URL); serve them same-origin so they work behind any host. */
 const sameOrigin = (u: string | null) => (u ? u.replace(/^https?:\/\/[^/]+/, "") : "");
 
 export const dynamic = "force-dynamic";
+export const metadata = { alternates: { canonical: "/" } };
 
 // Sticker-bomb layout: position (% of the pile), rotation, size, stacking.
 const PILE = [
@@ -25,8 +29,12 @@ const PILE = [
   { left: 14, top: 76, rot: 16, w: 30, z: 9 },
 ];
 
+const BADGE: Record<string, string> = { event: "On the calendar", community: "Community pick", dex: "New coin" };
+const fmtDay = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+
 export default async function Home() {
-  const [products, drop, live] = await Promise.all([getActiveProducts(8), getDropNumber(), getTrending(6)]);
+  const coming = upcomingEvents(4);
+  const [products, drop, live] = await Promise.all([getActiveProducts(8, { sort: "hot" }), getDropNumber(), getTrending(6)]);
   // Live trending slogans when the collector has found enough, else the hand-picked set.
   const trending =
     live.length >= 3
@@ -39,6 +47,7 @@ export default async function Home() {
             text: t.lines.join(" "),
             seen: t.blurb,
             image: sameOrigin(t.previewUrl),
+            badge: BADGE[t.source] ?? null,
           })),
         }
       : {
@@ -50,12 +59,31 @@ export default async function Home() {
             text: getSlogan(m.slogan).lines.join(" "),
             seen: m.seen,
             image: `/brand/meme-${i}.png`,
+            badge: null as string | null,
           })),
         };
 
   return (
     // Clip sideways: the tilted disclaimer band pokes past the viewport on phones.
     <div className="overflow-x-clip">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "OnlineStore",
+              "@id": abs("/#store"),
+              name: SITE_NAME,
+              url: abs("/"),
+              logo: abs("/og.jpg"),
+              description: "Crypto streetwear, printed on demand. Any coin, any meme.",
+              currenciesAccepted: "USD",
+              paymentAccepted: "Credit card, USDC",
+            },
+            { "@type": "WebSite", "@id": abs("/#site"), name: SITE_NAME, url: abs("/"), publisher: { "@id": abs("/#store") } },
+          ],
+        }}
+      />
       {/* Hero */}
       <section className="mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-10 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
         <div>
@@ -97,7 +125,7 @@ export default async function Home() {
       {/* Latest products */}
       <section className="mx-auto max-w-7xl px-4 py-12">
         <div className="mb-8 flex items-end justify-between gap-4 border-b-2 border-[var(--line)] pb-4">
-          <h2 className="display text-5xl sm:text-6xl">Fresh off the press</h2>
+          <h2 className="display text-5xl sm:text-6xl">Hot off the press</h2>
           <Link href="/shop" className="display shrink-0 text-xl text-[var(--acid)] hover:underline">
             Shop all
           </Link>
@@ -123,7 +151,7 @@ export default async function Home() {
             <h2 className="display text-5xl sm:text-6xl">Trending</h2>
             <p className="mt-2 text-[var(--dim)]">
               {trending.live
-                ? "Pulled from crypto X and Reddit, refreshed daily. Tap one to put it on a shirt, or swap in your own coin."
+                ? "Pulled from crypto X, Reddit and the DEX charts, refreshed three times a day. Tap one to put it on a shirt, or swap in your own coin."
                 : `What crypto X was posting in ${TIMELINE_AS_OF}. Tap one to put it on a shirt, or swap in your own coin.`}
             </p>
           </div>
@@ -148,9 +176,40 @@ export default async function Home() {
                 />
               </div>
               <div className="display mt-2 text-2xl group-hover:text-[var(--acid)]">{m.text}</div>
+              {m.badge && (
+                <span className="mt-1 inline-block bg-[var(--acid)] px-1.5 text-xs font-bold uppercase text-[var(--ink)]">{m.badge}</span>
+              )}
               <p className="text-sm text-[var(--dim)]">{m.seen}</p>
             </Link>
           ))}
+        </div>
+
+        {/* Coming up: the crypto calendar; each date's design goes live a week or two before */}
+        {coming.length > 0 && (
+          <div className="mt-12">
+            <h3 className="display mb-4 text-3xl">Coming up</h3>
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {coming.map((w) => {
+                const live = w.showFrom <= new Date();
+                return (
+                  <li key={w.event.key} className="flex items-baseline gap-3 border-2 border-[var(--line)] px-4 py-3">
+                    <span className="display shrink-0 text-2xl text-[var(--acid)]">{fmtDay(w.start)}</span>
+                    <span className="min-w-0">
+                      <span className="block font-bold">{w.event.name}</span>
+                      <span className="block text-sm text-[var(--dim)]">
+                        {live ? "Design is live above." : `Design drops ${fmtDay(w.showFrom)}.`}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-2 border-dashed border-[var(--line)] p-6">
+          <p className="marker -rotate-1 text-2xl text-[var(--acid)]">your coin deserves a shirt.</p>
+          <Link href="/shill" className="btn-ghost">Shill us yours</Link>
         </div>
       </section>
 

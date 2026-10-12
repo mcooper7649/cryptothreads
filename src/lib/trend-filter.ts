@@ -63,3 +63,12 @@ export function rejectReason(lines: string[]): string | null {
   if (SLOGANS.some((s) => squash(s.lines.join("")) === flat)) return "already in the slogan library";
   return null;
 }
+
+/** Tickers print on the shirt too (as the coin line), so they get the same blocklist. */
+export function tickerRejectReason(ticker: string): string | null {
+  if (!/^[A-Z0-9]{2,10}$/.test(ticker)) return "ticker isn't 2-10 letters/digits";
+  const flat = squash(ticker);
+  const hit = BLOCKED.find((b) => flat.includes(b)) ?? BLOCKED_WORDS.find((w) => w === ticker);
+  return hit ? `blocked ticker (${hit})` : null;
+}
+
