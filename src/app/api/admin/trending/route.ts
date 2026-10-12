@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { normalizeLines } from "@/lib/trend-filter";
 import { publishSlogan } from "@/lib/trending-publish";
+import { disableSloganProducts } from "@/lib/productize";
 
 export const runtime = "nodejs";
 
@@ -76,5 +77,7 @@ export async function PATCH(req: NextRequest) {
     .update({ where: { id: parsed.data.id }, data: { hidden: parsed.data.hidden, pinned: parsed.data.pinned } })
     .catch(() => null);
   if (!entry) return NextResponse.json({ error: "not found" }, { status: 404 });
+  // A hidden slogan can't be bought, so its shop products come down with it.
+  if (parsed.data.hidden) await disableSloganProducts(entry.id);
   return NextResponse.json({ entry });
 }

@@ -63,7 +63,8 @@ const REVIVE_ABOVE = 4_000_000;
  */
 export async function retireDeadCoins() {
   const rows = await prisma.product.findMany({
-    where: { OR: [{ status: "ACTIVE" }, { status: "DRAFT", retiredReason: { not: null } }], query: { not: null } },
+    // Only revive what this check retired (other retirements, like "trend over", stay down).
+    where: { OR: [{ status: "ACTIVE" }, { status: "DRAFT", retiredReason: { startsWith: "24h volume" } }], query: { not: null } },
     select: { id: true, query: true, status: true, retiredReason: true },
   });
   const symbols = Array.from(new Set(rows.map((r) => r.query!.toUpperCase()).filter((q) => /^[A-Z0-9]{2,10}$/.test(q))));
@@ -93,7 +94,7 @@ export async function retireDeadCoins() {
         data: { status: "DRAFT", retiredReason: `24h volume $${Math.round(v).toLocaleString("en-US")} (under $2M)` },
       });
       retired++;
-    } else if (r.status === "DRAFT" && r.retiredReason && v > REVIVE_ABOVE) {
+    } else if (r.status === "DRAFT" && r.retiredReason?.startsWith("24h volume") && v > REVIVE_ABOVE) {
       await prisma.product.update({ where: { id: r.id }, data: { status: "ACTIVE", retiredReason: null } });
       revived++;
     }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { promote } from "@/lib/community";
+import { disableSloganProducts } from "@/lib/productize";
 
 export const runtime = "nodejs";
 
@@ -37,6 +38,7 @@ export async function PATCH(req: NextRequest) {
   // Hiding a promoted idea also pulls its printed slogan.
   if (action === "hide" && entry.sloganId) {
     await prisma.trendingSlogan.updateMany({ where: { id: entry.sloganId }, data: { hidden: true } });
+    await disableSloganProducts(entry.sloganId);
   }
   return NextResponse.json({ entry });
 }

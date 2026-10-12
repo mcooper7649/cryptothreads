@@ -21,7 +21,11 @@
    (`src/lib/events.ts`), pins proven sellers (≥ 1 order, ≥ 3 carts or ≥ 25 likes) so
    they stay in the studio, ends duds early (≥ 40 views, no carts after 48h), retires
    coin products whose 24h volume drops under $2M (back above $4M → back in the shop),
-   and prints community ideas that reached 5 votes.
+   and prints community ideas that reached 5 votes;
+6. turns up to 6 of the hottest new memes into tee products with Printful mockups
+   (`POST /api/admin/productize`), so they show in the shop and on coin pages. Trend
+   products whose slogan expired a day ago with no carts or orders go back to DRAFT;
+   products of hidden slogans are disabled.
 
 Hide anything bad in `/admin` (*Trending memes*, *Shill board*). Hidden slogans disappear
 from the site and can't be checked out; orders already paid still print what was bought.

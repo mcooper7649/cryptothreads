@@ -357,6 +357,9 @@ def main():
 
     m = json.loads(http(f"{API}/api/admin/maintain", {"likes": likes}, {"x-admin-token": token}, timeout=600))
     print(f"maintain: {json.dumps(m)}")
+    # New memes become shop products (tees with Printful mockups); slow, so it goes last.
+    p = json.loads(http(f"{API}/api/admin/productize", {}, {"x-admin-token": token}, timeout=1500))
+    print(f"productize: {json.dumps(p)}")
 
 
 if __name__ == "__main__":
