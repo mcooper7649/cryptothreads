@@ -46,10 +46,19 @@ export const SLOGANS: Slogan[] = [
   { id: "exit-liquidity", lines: ["NOT YOUR", "EXIT", "LIQUIDITY"] },
   { id: "staying-poor", lines: ["HAVE FUN", "STAYING", "POOR"] },
   { id: "touch-grass", lines: ["WILL TOUCH", "GRASS", "AT ATH"] },
+  // From what crypto X was posting in October 2026.
+  { id: "crypto-is-back", lines: ["CRYPTO", "IS BACK", "(AGAIN)"] },
+  { id: "find-a-meme", lines: ["FIND A", "MEME AND", "PRAY"] },
+  { id: "shill-me", lines: ["SHILL ME", "YOUR", "TICKERS"] },
+  { id: "dont-ask", lines: ["DON'T ASK", "HOW MUCH", "I'M DOWN"] },
+  { id: "green-candle", lines: ["THE GREEN", "CANDLE", "FINDS YOU"] },
   { id: "one-btc", lines: ["1 BTC", "=", "1 BTC"], coins: ["BTC"] },
   { id: "stack-sats", lines: ["STACK", "SATS"], coins: ["BTC"] },
   { id: "ultrasound", lines: ["ULTRA", "SOUND", "MONEY"], coins: ["ETH"] },
   { id: "such-wow", lines: ["SUCH WOW", "VERY", "BULL"], coins: ["DOGE"] },
+  { id: "xrp-army", lines: ["XRP", "ARMY"], coins: ["XRP"] },
+  { id: "privacy-normal", lines: ["PRIVACY", "IS", "NORMAL"], coins: ["ZEC"] },
+  { id: "sol-summer", lines: ["SOLANA", "SUMMER"], coins: ["SOL"] },
 ];
 
 export const DEFAULT_SLOGAN = "hodl";
@@ -66,6 +75,8 @@ export function slogansFor(ticker?: string): Slogan[] {
     ...SLOGANS.filter((s) => !s.coins),
   ];
 }
+
+export const isSlogan = (v: unknown): v is string => typeof v === "string" && SLOGANS.some((s) => s.id === v);
 
 export const styleUsesSlogan = (style: StyleId) => STYLES.find((s) => s.id === style)?.slogan ?? false;
 

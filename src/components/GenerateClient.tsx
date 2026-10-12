@@ -30,11 +30,19 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
   );
 }
 
-export function GenerateClient({ initialQuery = "", initialStyle }: { initialQuery?: string; initialStyle?: StyleId }) {
+export function GenerateClient({
+  initialQuery = "",
+  initialStyle,
+  initialSlogan,
+}: {
+  initialQuery?: string;
+  initialStyle?: StyleId;
+  initialSlogan?: string;
+}) {
   const { add } = useCart();
   const [query, setQuery] = useState(initialQuery);
   const [style, setStyle] = useState<StyleId>(initialStyle ?? DEFAULT_STYLE);
-  const [slogan, setSlogan] = useState<string>("hodl");
+  const [slogan, setSlogan] = useState<string>(initialSlogan ?? "hodl");
   const [blank, setBlank] = useState<BlankType>("tee");
   const [size, setSize] = useState("M");
   const [preview, setPreview] = useState<Preview | null>(null);

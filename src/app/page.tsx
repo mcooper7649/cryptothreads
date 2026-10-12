@@ -4,6 +4,8 @@ import { ProductCard } from "@/components/ProductCard";
 import { STYLES } from "@/lib/design/styles";
 import { BLANKS, BLANK_TYPES } from "@/lib/printful/blanks";
 import { formatPrice } from "@/lib/format";
+import { TIMELINE, TIMELINE_AS_OF } from "@/lib/timeline";
+import { getSlogan } from "@/lib/design/styles";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +84,39 @@ export default async function Home() {
             <Link href="/generate" className="text-[var(--acid)] underline">Make the first one.</Link>
           </p>
         )}
+      </section>
+
+      {/* Memes from crypto X, each one opens in the studio ready to buy */}
+      <section className="mx-auto max-w-7xl px-4 py-12">
+        <div className="mb-8 border-b-2 border-[var(--line)] pb-4">
+          <h2 className="display text-5xl sm:text-6xl">On the timeline</h2>
+          <p className="mt-2 text-[var(--dim)]">
+            What crypto X was posting in {TIMELINE_AS_OF}. Tap one to put it on a shirt, or swap in your own coin.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+          {TIMELINE.map((m, i) => (
+            <Link
+              key={m.slogan}
+              href={`/generate?q=${m.ticker}&style=${m.style}&slogan=${m.slogan}`}
+              className="group block"
+            >
+              <div className="garment aspect-[5/6] border-2 border-[var(--line)] p-3 transition-colors group-hover:border-[var(--acid)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/brand/meme-${i}.png`}
+                  alt={`$${m.ticker} “${getSlogan(m.slogan).lines.join(" ")}” design`}
+                  className="h-full w-full object-contain"
+                  loading="lazy"
+                />
+              </div>
+              <div className="display mt-2 text-2xl group-hover:text-[var(--acid)]">
+                {getSlogan(m.slogan).lines.join(" ")}
+              </div>
+              <p className="text-sm text-[var(--dim)]">{m.seen}</p>
+            </Link>
+          ))}
+        </div>
       </section>
 
       {/* Styles */}

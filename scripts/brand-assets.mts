@@ -2,12 +2,14 @@
  * Renders the storefront's showcase art with the real print engine:
  *   public/brand/style-<id>.png   one example per print style (style picker, home page)
  *   public/brand/sticker-<n>.png  stickers for the sticker-bombed hero
+ *   public/brand/meme-<n>.png     the "on the timeline" designs (src/lib/timeline.ts)
  *   npx tsx scripts/brand-assets.mts
  */
 import { mkdir, writeFile } from "fs/promises";
 import sharp from "sharp";
 import { renderPrintFile } from "../src/lib/design/render";
 import type { StyleId } from "../src/lib/design/styles";
+import { TIMELINE } from "../src/lib/timeline";
 
 const icon = (t: string) => `https://raw.githubusercontent.com/Cryptofonts/cryptoicons/master/SVG/${t}.svg`;
 const cache = new Map<string, Buffer>();
@@ -35,9 +37,9 @@ const stickers: [StyleId, string, string][] = [
   ["stamp", "ETH", "ultrasound"],
   ["slogan", "SOL", "ser"],
   ["pixel", "BTC", "gm"],
-  ["slogan", "ETH", "few-understand"],
-  ["box", "XRP", "probably-nothing"],
-  ["slogan", "DOGE", "wen-moon"],
+  ["slogan", "ETH", "crypto-is-back"],
+  ["box", "XRP", "xrp-army"],
+  ["slogan", "DOGE", "find-a-meme"],
 ];
 
 async function main() {
@@ -49,6 +51,10 @@ async function main() {
   for (const [i, [style, t, slogan]] of stickers.entries()) {
     const r = await renderPrintFile({ logoData: await logo(t), isVector: true, ticker: t, style, slogan, format: "sticker", previewOnly: true });
     await writeFile(`public/brand/sticker-${i}.png`, await sharp(r.previewPng).resize(420).png({ compressionLevel: 9, palette: true }).toBuffer());
+  }
+  for (const [i, { style, ticker: t, slogan }] of TIMELINE.entries()) {
+    const r = await renderPrintFile({ logoData: await logo(t), isVector: true, ticker: t, style, slogan, previewOnly: true });
+    await writeFile(`public/brand/meme-${i}.png`, await sharp(r.previewPng).resize(600).png({ compressionLevel: 9, palette: true }).toBuffer());
   }
   console.log("brand assets written");
 }
