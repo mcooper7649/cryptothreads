@@ -13,3 +13,13 @@ export const SITE_NAME = "CryptoThreads";
 
 /** Product structured data needs plain dollars, not cents. */
 export const dollars = (cents: number) => (cents / 100).toFixed(2);
+
+/** Full names for coins whose logo source has none; search traffic uses the name ("dogecoin shirt"). */
+const COIN_NAMES: Record<string, string> = {
+  BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", DOGE: "Dogecoin", XRP: "XRP", PEPE: "Pepe", WIF: "dogwifhat",
+  LINK: "Chainlink", SHIB: "Shiba Inu", BONK: "Bonk", ADA: "Cardano", AVAX: "Avalanche", SUI: "Sui", TON: "Toncoin",
+  LTC: "Litecoin", BNB: "BNB", TRX: "TRON", ZEC: "Zcash", STRK: "Starknet", HYPE: "Hyperliquid",
+};
+
+export const coinDisplayName = (symbol: string, logoName?: string | null) =>
+  (logoName && logoName.toUpperCase() !== symbol.toUpperCase() ? logoName : null) ?? COIN_NAMES[symbol.toUpperCase()] ?? null;

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
-import { abs, dollars, onSite, SITE_NAME } from "@/lib/seo";
+import { abs, coinDisplayName, dollars, onSite, SITE_NAME } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/lib/queries";
 import { AddToCart } from "@/components/AddToCart";
@@ -25,7 +25,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const product = await getProductBySlug(params.slug);
   if (!product || product.status !== "ACTIVE") return { title: "Not found", robots: { index: false } };
   const blank = isBlankType(product.blankType) ? BLANKS[product.blankType] : null;
-  const coin = product.design.logo.name ?? (product.query ?? "").toUpperCase();
+  const sym = (product.query ?? product.design.logo.symbol ?? "").toUpperCase();
+  const coin = coinDisplayName(sym, product.design.logo.name) ?? sym;
   const description =
     `${product.title}: ${coin} ${blank?.format === "sticker" ? "vinyl sticker" : `${(blank?.label ?? "shirt").toLowerCase()} on black`}, ` +
     `printed on demand for ${formatPrice(product.priceCents)}. Ships in the US for a flat $5. Pay by card or USDC.`;

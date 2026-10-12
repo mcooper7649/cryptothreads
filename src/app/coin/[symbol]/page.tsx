@@ -6,7 +6,7 @@ import { getActiveProducts } from "@/lib/queries";
 import { getTrending } from "@/lib/slogans";
 import { ProductCard } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
-import { abs, onSite, SITE_NAME } from "@/lib/seo";
+import { abs, coinDisplayName, onSite, SITE_NAME } from "@/lib/seo";
 import { formatPrice } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ const sym = (raw: string) => decodeURIComponent(raw).toUpperCase().replace(/[^A-
 
 async function coinName(symbol: string): Promise<string | null> {
   const logo = await prisma.logoCache.findUnique({ where: { symbol }, select: { name: true } }).catch(() => null);
-  return logo?.name ?? null;
+  return coinDisplayName(symbol, logo?.name);
 }
 
 const label = (symbol: string, name: string | null) => (name && name.toUpperCase() !== symbol ? `${name} (${symbol})` : symbol);
