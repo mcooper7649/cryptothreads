@@ -25,7 +25,8 @@ export default async function Home() {
   const [products, drop] = await Promise.all([getActiveProducts(8), getDropNumber()]);
 
   return (
-    <div>
+    // Clip sideways: the tilted disclaimer band pokes past the viewport on phones.
+    <div className="overflow-x-clip">
       {/* Hero */}
       <section className="mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-10 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
         <div>
