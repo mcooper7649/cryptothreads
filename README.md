@@ -2,7 +2,7 @@
 
 Crypto streetwear, printed on demand. Any coin, any meme.
 
-**Live:** https://cryptothreads.mycodedojo.com
+**Live:** https://cryptothreads.us
 
 Type a ticker (`BTC`), a CoinGecko id (`ethereum`) or a project's website (`uniswap.org`). CryptoThreads finds the logo, composes a print-ready design in the browser preview, and when someone orders, renders a 4500×5400 print file that Printful prints and ships. There's no inventory: every product is made after it's paid for.
 
