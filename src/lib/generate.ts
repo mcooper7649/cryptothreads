@@ -265,7 +265,7 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
   const blank = getBlank(blankType);
 
   const asset = await buildPrintAsset(opts.query, opts, blankType);
-  const { ticker, mode, style, slogan, sloganLines, base } = asset;
+  const { ticker, mode, style, slogan, sloganLines } = asset;
 
   const design = await prisma.design.create({
     data: {
