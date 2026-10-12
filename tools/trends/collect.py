@@ -65,7 +65,10 @@ def reddit():
     """Top posts of the day. Reddit's JSON API 403s from here; the RSS feed doesn't."""
     out = []
     ns = {"a": "http://www.w3.org/2005/Atom"}
-    for sub in SUBS:
+    # Three runs a day share Reddit's unauthenticated RSS limit, so each run reads
+    # three of the subreddits, rotating by hour, with long gaps between them.
+    start = time.gmtime().tm_hour % len(SUBS)
+    for sub in (SUBS * 2)[start:start + 3]:
         for attempt in range(2):
             try:
                 root = ET.fromstring(http(f"https://www.reddit.com/r/{sub}/top/.rss?t=day&limit=25"))
@@ -76,7 +79,7 @@ def reddit():
                 if "429" not in str(e):
                     break
                 time.sleep(60)  # unauthenticated RSS is rate limited hard
-        time.sleep(15)
+        time.sleep(30)
     return out
 
 
