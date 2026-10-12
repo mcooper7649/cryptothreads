@@ -1,12 +1,9 @@
 /**
  * Re-render every product's print file, preview and Printful mockups with the
- * current templates, and refresh its title. Live trending-slogan previews too. Use after a template change that
- * alters printed art (e.g. dropping the "$" from tickers).
+ * current templates, and refresh its title, plus live trending-slogan previews.
+ * Use after a template change that alters printed art (e.g. dropping the "$" from tickers).
  *
  *   npx tsx scripts/rerender-products.mts [--dry] [slug ...]
- *
- * Asset keys are rewritten in place, so stored URLs get a ?v= stamp to get past
- * the day-long /cache and Cloudflare caching.
  */
 import { prisma } from "../src/lib/db";
 import { buildPrintAsset, printfulListing } from "../src/lib/generate";
@@ -19,8 +16,7 @@ import type { StyleId } from "../src/lib/design/styles";
 const args = process.argv.slice(2);
 const dry = args.includes("--dry");
 const only = args.filter((a) => !a.startsWith("--"));
-const v = `v=${Date.now()}`;
-const stamp = (u: string) => (/^https?:\/\//.test(u) ? `${u.split("?")[0]}?${v}` : u);
+const stamp = (u: string) => (/^https?:\/\//.test(u) ? `${u}?v=${Date.now()}` : u);
 
 const products = await prisma.product.findMany({
   where: only.length ? { slug: { in: only } } : {},
@@ -45,12 +41,12 @@ for (const p of products) {
     const { mockupUrls } = await printfulListing(asset, blankType);
     await prisma.design.update({
       where: { id: p.designId },
-      data: { printFileUrl: stamp(asset.printUrl), previewUrl: stamp(asset.previewUrl) },
+      data: { printFileUrl: asset.printUrl, previewUrl: asset.previewUrl },
     });
     await prisma.product.update({
       where: { id: p.id },
       // Keep the old mockups if Printful failed rather than blanking the listing.
-      data: { title, ...(mockupUrls.length ? { mockupUrls: mockupUrls.map(stamp) } : {}) },
+      data: { title, ...(mockupUrls.length ? { mockupUrls } : {}) },
     });
     ok++;
     console.log(`ok ${p.slug}: ${title} (${mockupUrls.length} mockups)`);

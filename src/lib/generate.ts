@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { prisma } from "@/lib/db";
 import { resolveLogo, fetchLogoFromSources } from "@/lib/logo/resolve";
 import { renderPrintFile } from "@/lib/design/render";
@@ -12,6 +13,14 @@ import type { DesignMode, Product } from "@prisma/client";
 
 function titleCase(s: string): string {
   return s.toLowerCase().replace(/(^|\s)([a-z])/g, (_, a, b) => a + b.toUpperCase());
+}
+
+/**
+ * Asset keys are rewritten in place, so tag URLs with a content hash: Printful
+ * dedupes file uploads by URL and browsers/Cloudflare cache /cache for a day.
+ */
+function versioned(url: string, data: Buffer): string {
+  return /^https?:\/\//.test(url) ? `${url}?v=${createHash("sha1").update(data).digest("hex").slice(0, 12)}` : url;
 }
 
 function slugify(s: string): string {
@@ -171,9 +180,9 @@ export async function buildPrintAsset(
   const previewStore = await putAsset(`previews/${base}.png`, rendered.previewPng, "image/png");
 
   return {
-    printUrl: printStore.url,
+    printUrl: versioned(printStore.url, rendered.printPng),
     printKey: printStore.key,
-    previewUrl: previewStore.url,
+    previewUrl: versioned(previewStore.url, rendered.previewPng),
     ticker,
     name,
     mode,
@@ -225,12 +234,9 @@ export async function printfulListing(asset: PrintAsset, blankType: BlankType) {
         for (let i = 0; i < mocks.length; i++) {
           const res = await fetch(mocks[i].url);
           if (!res.ok) continue;
-          const stored = await putAsset(
-            `mockups/${base}-${blankType}-${i}.png`,
-            Buffer.from(await res.arrayBuffer()),
-            "image/png"
-          );
-          mockupUrls.push(stored.url);
+          const png = Buffer.from(await res.arrayBuffer());
+          const stored = await putAsset(`mockups/${base}-${blankType}-${i}.png`, png, "image/png");
+          mockupUrls.push(versioned(stored.url, png));
         }
 
         // Retail price is fixed per blank (the same price checkout charges);
