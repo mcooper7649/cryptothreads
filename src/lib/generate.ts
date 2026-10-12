@@ -192,35 +192,16 @@ export interface GenerateOptions extends DesignChoice {
 }
 
 /**
- * Full generation: build print asset -> persist Design -> (Printful file upload
- * + mockups + pricing) -> persist Product. Printful steps are skipped when no
- * token is set or the print file isn't publicly reachable.
+ * Printful file upload + mockups + pricing for a rendered asset (best-effort).
+ * Skipped when no token is set or the print file isn't publicly reachable.
  */
-export async function generateProduct(opts: GenerateOptions): Promise<Product> {
-  const blankType: BlankType = opts.blankType ?? "tee";
+export async function printfulListing(asset: PrintAsset, blankType: BlankType) {
   const blank = getBlank(blankType);
-
-  const asset = await buildPrintAsset(opts.query, opts, blankType);
-  const { ticker, mode, style, slogan, sloganLines, base } = asset;
-
-  const design = await prisma.design.create({
-    data: {
-      logoId: asset.logoId ?? (await ensurePlaceholderLogo(ticker)),
-      mode,
-      template: mode === "EXACT" ? "exact" : style,
-      style,
-      slogan,
-      printFileUrl: asset.printUrl,
-      printFileKey: asset.printKey,
-      previewUrl: asset.previewUrl,
-    },
-  });
-
-  // ---- Printful: upload file, mockups, pricing (best-effort) ----
   let mockupUrls: string[] = [];
   let variants: unknown[] = [];
   let baseCostCents = 0;
   const priceCents = retailPriceCents(blankType);
+  const { base } = asset;
 
   const printIsPublic = /^https?:\/\//.test(asset.printUrl);
   if (process.env.PRINTFUL_API_TOKEN && printIsPublic) {
@@ -271,10 +252,41 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
     }
   }
 
+  return { mockupUrls, variants, baseCostCents };
+}
+
+/**
+ * Full generation: build print asset -> persist Design -> (Printful file upload
+ * + mockups + pricing) -> persist Product. Printful steps are skipped when no
+ * token is set or the print file isn't publicly reachable.
+ */
+export async function generateProduct(opts: GenerateOptions): Promise<Product> {
+  const blankType: BlankType = opts.blankType ?? "tee";
+  const blank = getBlank(blankType);
+
+  const asset = await buildPrintAsset(opts.query, opts, blankType);
+  const { ticker, mode, style, slogan, sloganLines, base } = asset;
+
+  const design = await prisma.design.create({
+    data: {
+      logoId: asset.logoId ?? (await ensurePlaceholderLogo(ticker)),
+      mode,
+      template: mode === "EXACT" ? "exact" : style,
+      style,
+      slogan,
+      printFileUrl: asset.printUrl,
+      printFileKey: asset.printKey,
+      previewUrl: asset.previewUrl,
+    },
+  });
+
+  const { mockupUrls, variants, baseCostCents } = await printfulListing(asset, blankType);
+  const priceCents = retailPriceCents(blankType);
+
   // Persist product (unique slug with collision retry).
   const styleLabel = mode === "EXACT" ? "Logo" : STYLES.find((x) => x.id === style)!.label;
   const sloganText = sloganLines ? ` “${titleCase(sloganLines.join(" "))}”` : "";
-  const title = `$${ticker}${sloganText} ${styleLabel} ${blank.label}`;
+  const title = `${ticker}${sloganText} ${styleLabel} ${blank.label}`;
   const slug = slugify(`${ticker}-${mode === "EXACT" ? "logo" : style}-${slogan ?? ""}-${blankType}`);
   const status = mockupUrls.length ? "ACTIVE" : "DRAFT";
 

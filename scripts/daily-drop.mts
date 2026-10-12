@@ -62,13 +62,13 @@ async function main() {
 
   if (!made.length) return;
 
-  const title = `Daily Drop: ${made.map((m) => "$" + m.symbol).join(" & ")}`;
+  const title = `Daily Drop: ${made.map((m) => m.symbol).join(" & ")}`;
   const body = [
     `Today's trending coins just hit the rack.`,
     ``,
     ...made.map(
       (m) =>
-        `## ${m.name} ($${m.symbol})\nFresh stylized ${"$" + m.symbol} apparel, printed on demand. ` +
+        `## ${m.name} (${m.symbol})\nFresh stylized ${m.symbol} apparel, printed on demand. ` +
         `[Grab the tee](/product/${m.slug}) — ${formatPrice(m.priceCents)}.`
     ),
   ].join("\n");
@@ -77,7 +77,7 @@ async function main() {
     data: {
       title,
       slug: slugForToday(),
-      excerpt: `New drops for ${made.map((m) => "$" + m.symbol).join(", ")}.`,
+      excerpt: `New drops for ${made.map((m) => m.symbol).join(", ")}.`,
       bodyMdx: body,
       coinRefs: made.map((m) => m.symbol),
       productIds: [],

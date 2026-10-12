@@ -142,7 +142,7 @@ export default async function Home() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={m.image}
-                  alt={`$${m.ticker} “${m.text}” design`}
+                  alt={`${m.ticker} “${m.text}” design`}
                   className="h-full w-full object-contain"
                   loading="lazy"
                 />

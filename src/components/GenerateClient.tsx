@@ -124,8 +124,8 @@ export function GenerateClient({
               <span className="text-[var(--red)]">{error}</span>
             ) : preview ? (
               preview.found
-                ? `Found $${preview.ticker}${preview.name ? ` (${preview.name})` : ""}.`
-                : `No logo found for $${preview.ticker}, so it prints as type only. Still slaps.`
+                ? `Found ${preview.ticker}${preview.name ? ` (${preview.name})` : ""}.`
+                : `No logo found for ${preview.ticker}, so it prints as type only. Still slaps.`
             ) : null}
           </p>
         </Step>
@@ -181,7 +181,7 @@ export function GenerateClient({
                   onClick={() => setSlogan(s.id)}
                   aria-pressed={slogan === s.id}
                   className={`chip ${slogan === s.id ? "chip-on" : ""} ${s.coins ? "border-dashed" : ""}`}
-                  title={s.coins ? `$${s.coins[0]} special` : undefined}
+                  title={s.coins ? `${s.coins[0]} special` : undefined}
                 >
                   {s.lines.join(" ")}
                 </button>
@@ -227,7 +227,7 @@ export function GenerateClient({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={preview.previewDataUri}
-              alt={`$${preview.ticker} ${styleLabel} design`}
+              alt={`${preview.ticker} ${styleLabel} design`}
               className={`h-full w-full object-contain p-6 transition-opacity ${loading ? "opacity-40" : ""}`}
             />
           ) : (
@@ -243,7 +243,7 @@ export function GenerateClient({
         <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="display text-2xl">
-              {preview ? `$${preview.ticker}` : "Your coin"} · {styleLabel} {BLANKS[blank].label}
+              {preview ? `${preview.ticker}` : "Your coin"} · {styleLabel} {BLANKS[blank].label}
             </p>
             {sloganLabel && <p className="text-sm text-[var(--dim)]">&ldquo;{sloganLabel}&rdquo; · size {size}</p>}
           </div>
@@ -256,7 +256,7 @@ export function GenerateClient({
           onClick={() => {
             if (!preview) return;
             add({
-              title: `$${preview.ticker}${sloganLabel ? ` “${sloganLabel}”` : ""} ${styleLabel} ${BLANKS[blank].label}`,
+              title: `${preview.ticker}${sloganLabel ? ` “${sloganLabel}”` : ""} ${styleLabel} ${BLANKS[blank].label}`,
               blankType: blank,
               mode: "STYLIZED",
               style,

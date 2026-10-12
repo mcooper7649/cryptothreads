@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       // Snapshot the normalized design so fulfillment reprints exactly this.
       ...(await designChoice(it)),
       priceCents: retailPriceCents(it.blankType),
-      title: it.title || `$${it.query.toUpperCase()} ${it.blankType}`,
+      title: it.title || `${it.query.toUpperCase()} ${it.blankType}`,
     }))
   );
   const subtotalCents = priced.reduce((s, i) => s + i.priceCents * i.qty, 0);

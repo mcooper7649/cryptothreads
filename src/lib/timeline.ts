@@ -13,5 +13,5 @@ export const TIMELINE: { style: StyleId; ticker: string; slogan: string; seen: s
   { style: "receipt", ticker: "SOL", slogan: "dont-ask", seen: "The look, as a receipt." },
   { style: "chart", ticker: "XRP", slogan: "green-candle", seen: "XRP Ledger was trending." },
   { style: "stamp", ticker: "ZEC", slogan: "privacy-normal", seen: "ZEC is back on the timeline." },
-  { style: "pixel", ticker: "STRK", slogan: "shill-me", seen: "$STRK was trending. Shill us yours." },
+  { style: "pixel", ticker: "STRK", slogan: "shill-me", seen: "STRK was trending. Shill us yours." },
 ];

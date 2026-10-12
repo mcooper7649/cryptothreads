@@ -66,7 +66,7 @@ export default async function Shop({ searchParams }: { searchParams: Params }) {
             <span className="label mb-0 mr-2 w-16">Coin</span>
             <Chip to={href(current, { coin: undefined })} on={!current.coin}>All</Chip>
             {coins.map((c) => (
-              <Chip key={c} to={href(current, { coin: c })} on={current.coin === c}>${c}</Chip>
+              <Chip key={c} to={href(current, { coin: c })} on={current.coin === c}>{c}</Chip>
             ))}
           </div>
         )}

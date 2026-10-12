@@ -50,7 +50,7 @@ const frame = (extra: React.CSSProperties = {}): React.CSSProperties => ({
   ...extra,
 });
 
-const tickerText = (p: TemplateProps) => `$${p.ticker.toUpperCase()}`;
+const tickerText = (p: TemplateProps) => p.ticker.toUpperCase();
 
 /* ---------------------------------------------------------------- box */
 
