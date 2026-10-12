@@ -21,12 +21,24 @@ interface AllowEntry {
   exactLogoPermitted: boolean;
   notes: string | null;
 }
+interface TrendEntry {
+  id: string;
+  lines: string[];
+  ticker: string;
+  style: string;
+  blurb: string;
+  source: string;
+  previewUrl: string | null;
+  hidden: boolean;
+  expiresAt: string;
+}
 
 export default function AdminPage() {
   const [token, setToken] = useState("");
   const [authed, setAuthed] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [allow, setAllow] = useState<AllowEntry[]>([]);
+  const [trends, setTrends] = useState<TrendEntry[]>([]);
   const [log, setLog] = useState<string>("");
 
   useEffect(() => {
@@ -41,9 +53,10 @@ export default function AdminPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const [p, a] = await Promise.all([
+      const [p, a, t] = await Promise.all([
         fetch("/api/admin/products", { headers: headers() }),
         fetch("/api/admin/allowlist", { headers: headers() }),
+        fetch("/api/admin/trending", { headers: headers() }),
       ]);
       if (p.status === 401 || a.status === 401) {
         setAuthed(false);
@@ -52,6 +65,7 @@ export default function AdminPage() {
       }
       setProducts((await p.json()).products ?? []);
       setAllow((await a.json()).entries ?? []);
+      setTrends(t.ok ? (await t.json()).entries ?? [] : []);
       setAuthed(true);
     } catch {
       setLog("network error");
@@ -88,6 +102,11 @@ export default function AdminPage() {
       headers: headers(),
       body: JSON.stringify({ status }),
     });
+    refresh();
+  }
+
+  async function setHidden(id: string, hidden: boolean) {
+    await fetch("/api/admin/trending", { method: "PATCH", headers: headers(), body: JSON.stringify({ id, hidden }) });
     refresh();
   }
 
@@ -149,6 +168,37 @@ export default function AdminPage() {
                 <option value="EXACT">exact</option>
               </select>
               <button className={btn} onClick={generate}>Generate</button>
+            </div>
+          </section>
+
+          {/* Trending: auto-published by the daily collector; hide anything that shouldn't be up */}
+          <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-3 font-bold">Trending memes ({trends.filter((t) => !t.hidden && new Date(t.expiresAt) > new Date()).length} live)</h2>
+            <div className="space-y-2 text-sm">
+              {trends.map((t) => {
+                const expired = new Date(t.expiresAt) <= new Date();
+                return (
+                  <div key={t.id} className="flex items-center gap-3 border-b border-[var(--border)] py-2">
+                    {t.previewUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={t.previewUrl.replace(/^https?:\/\/[^/]+/, "")} alt="" className="h-14 w-12 shrink-0 object-contain" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className={`truncate ${t.hidden ? "line-through text-white/40" : ""}`}>{t.lines.join(" / ")}</div>
+                      <div className="truncate text-xs text-white/40">
+                        ${t.ticker} · {t.style} · {t.source} · {t.hidden ? "hidden" : expired ? "expired" : `until ${new Date(t.expiresAt).toLocaleDateString()}`} · {t.blurb}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setHidden(t.id, !t.hidden)}
+                      className={`shrink-0 rounded px-2 py-1 text-xs ${t.hidden ? "border border-[var(--border)] hover:border-white/40" : "bg-red-600"}`}
+                    >
+                      {t.hidden ? "Unhide" : "Hide"}
+                    </button>
+                  </div>
+                );
+              })}
+              {!trends.length && <div className="text-white/40">Nothing yet. The collector runs daily.</div>}
             </div>
           </section>
 

@@ -138,3 +138,22 @@ model Allowlist {
   notes               String?
   createdAt           DateTime @default(now())
 }
+
+/// Slogans found on crypto X / Reddit by the daily trend collector
+/// (tools/trends/collect.py). Shown in the Trending section until expiresAt;
+/// expired ones still resolve so carts and orders keep printing them.
+model TrendingSlogan {
+  id         String   @id // "t-<slug of the text>"
+  lines      String[]
+  ticker     String // coin it's shown on
+  style      String // print style it's shown in
+  blurb      String // one line on where it came from
+  source     String // "x" | "reddit" | "coingecko" | ...
+  score      Float    @default(0)
+  previewUrl String?
+  hidden     Boolean  @default(false) // admin kill switch; blocks new orders too
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([expiresAt])
+}

@@ -23,6 +23,8 @@ export interface RenderInput {
   style?: StyleId;
   /** Slogan id from the library, for styles that print one. */
   slogan?: string;
+  /** Slogan lines to print, overriding `slogan` (trending slogans live in the DB). */
+  sloganLines?: string[];
   /** "sticker" puts the design on a black rounded square sized for kiss-cut stickers. */
   format?: "apparel" | "sticker";
   accent?: string; // override palette-derived accent
@@ -97,7 +99,7 @@ export async function renderPrintFile(input: RenderInput): Promise<RenderOutput>
     accent,
     onAccent: onColor(accent),
     fg,
-    slogan: getSlogan(input.slogan).lines,
+    slogan: input.sloganLines ?? getSlogan(input.slogan).lines,
   };
 
   const element = TEMPLATES[templateName(input)](props);

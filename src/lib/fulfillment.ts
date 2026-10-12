@@ -13,6 +13,8 @@ interface OrderItemSnapshot {
   mode: DesignMode;
   style?: StyleId;
   slogan?: string | null;
+  /** Lines snapshotted at checkout, so a slogan hidden later still prints as bought. */
+  sloganLines?: string[] | null;
   size?: string;
   qty: number;
   title?: string;
@@ -57,7 +59,7 @@ export async function fulfillOrder(orderId: string): Promise<void> {
     const blank = getBlank(item.blankType);
     const asset = await buildPrintAsset(
       item.query,
-      { mode: item.mode, style: item.style, slogan: item.slogan ?? undefined },
+      { mode: item.mode, style: item.style, slogan: item.slogan ?? undefined, sloganLines: item.sloganLines ?? undefined },
       item.blankType
     );
     if (!/^https?:\/\//.test(asset.printUrl)) {

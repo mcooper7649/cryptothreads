@@ -1,9 +1,13 @@
 import { GenerateClient } from "@/components/GenerateClient";
-import { isSlogan, isStyle } from "@/lib/design/styles";
+import { isStyle } from "@/lib/design/styles";
+import { findSlogan, getTrending } from "@/lib/slogans";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Make your own: CryptoThreads" };
 
-export default function GeneratePage({ searchParams }: { searchParams: { q?: string; style?: string; slogan?: string } }) {
+export default async function GeneratePage({ searchParams }: { searchParams: { q?: string; style?: string; slogan?: string } }) {
+  const [trending, initial] = await Promise.all([getTrending(12), findSlogan(searchParams.slogan?.slice(0, 64))]);
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="display text-[clamp(3.5rem,9vw,7rem)]">Make your own</h1>
@@ -15,7 +19,8 @@ export default function GeneratePage({ searchParams }: { searchParams: { q?: str
         <GenerateClient
           initialQuery={searchParams.q?.slice(0, 64) ?? ""}
           initialStyle={isStyle(searchParams.style) ? searchParams.style : undefined}
-          initialSlogan={isSlogan(searchParams.slogan) ? searchParams.slogan : undefined}
+          initialSlogan={initial?.id}
+          trending={trending.map((t) => ({ id: t.id, lines: t.lines }))}
         />
       </div>
     </div>

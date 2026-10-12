@@ -6,7 +6,8 @@ import { getBlank, BlankType, retailPriceCents } from "@/lib/printful/blanks";
 import { uploadFile } from "@/lib/printful/files";
 import { generateMockups } from "@/lib/printful/mockups";
 import { getCatalogVariants, getVariantBasePrice, sellableVariants } from "@/lib/printful/catalog";
-import { DEFAULT_SLOGAN, DEFAULT_STYLE, STYLES, getSlogan, styleUsesSlogan, type StyleId } from "@/lib/design/styles";
+import { DEFAULT_STYLE, STYLES, styleUsesSlogan, type StyleId } from "@/lib/design/styles";
+import { resolveSlogan } from "@/lib/slogans";
 import type { DesignMode, Product } from "@prisma/client";
 
 function titleCase(s: string): string {
@@ -40,15 +41,27 @@ export interface DesignChoice {
   mode?: DesignMode;
   style?: StyleId;
   slogan?: string;
+  /** Server-only: lines snapshotted on an order, which win over a lookup. */
+  sloganLines?: string[];
 }
 
-/** Normalize a design choice: styles without a slogan don't carry one. */
-export function designChoice(c: DesignChoice) {
+/**
+ * Normalize a design choice: styles without a slogan don't carry one, and an
+ * unknown slogan id falls back to the default. Resolves the printed lines too,
+ * since trending slogans live in the DB.
+ */
+export async function designChoice(c: DesignChoice) {
   const style = c.style ?? DEFAULT_STYLE;
+  const s = !styleUsesSlogan(style)
+    ? null
+    : c.slogan && c.sloganLines?.length
+      ? { id: c.slogan, lines: c.sloganLines }
+      : await resolveSlogan(c.slogan);
   return {
     mode: c.mode ?? ("STYLIZED" as DesignMode),
     style,
-    slogan: styleUsesSlogan(style) ? getSlogan(c.slogan ?? DEFAULT_SLOGAN).id : null,
+    slogan: s?.id ?? null,
+    sloganLines: s?.lines ?? null,
   };
 }
 
@@ -57,7 +70,7 @@ export async function previewDesign(
   choice: DesignChoice = {},
   blankType: BlankType = "tee"
 ): Promise<PreviewResult> {
-  const { mode, style, slogan } = designChoice(choice);
+  const { mode, style, slogan, sloganLines } = await designChoice(choice);
   const src = await fetchLogoFromSources(query);
   const fb = fallbackIdentity(query);
   const ticker = src?.symbol || fb.ticker;
@@ -71,6 +84,7 @@ export async function previewDesign(
     mode,
     style,
     slogan: slogan ?? undefined,
+    sloganLines: sloganLines ?? undefined,
     format: getBlank(blankType).format,
     previewOnly: true,
   });
@@ -110,6 +124,7 @@ export interface PrintAsset {
   mode: DesignMode;
   style: StyleId;
   slogan: string | null;
+  sloganLines: string[] | null;
   accent: string;
   logoId: string | null;
   /** File-name stem unique to coin + design + format. */
@@ -126,7 +141,7 @@ export async function buildPrintAsset(
   choice: DesignChoice,
   blankType: BlankType
 ): Promise<PrintAsset> {
-  const { mode: modeIn, style, slogan } = designChoice(choice);
+  const { mode: modeIn, style, slogan, sloganLines } = await designChoice(choice);
   const format = getBlank(blankType).format;
   const logo = await resolveLogo(query);
   const fb = fallbackIdentity(query);
@@ -146,6 +161,7 @@ export async function buildPrintAsset(
     mode,
     style,
     slogan: slogan ?? undefined,
+    sloganLines: sloganLines ?? undefined,
     format,
   });
 
@@ -163,6 +179,7 @@ export async function buildPrintAsset(
     mode,
     style,
     slogan,
+    sloganLines,
     accent: rendered.accent,
     logoId: logo?.id ?? null,
     base,
@@ -184,7 +201,7 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
   const blank = getBlank(blankType);
 
   const asset = await buildPrintAsset(opts.query, opts, blankType);
-  const { ticker, mode, style, slogan, base } = asset;
+  const { ticker, mode, style, slogan, sloganLines, base } = asset;
 
   const design = await prisma.design.create({
     data: {
@@ -256,7 +273,7 @@ export async function generateProduct(opts: GenerateOptions): Promise<Product> {
 
   // Persist product (unique slug with collision retry).
   const styleLabel = mode === "EXACT" ? "Logo" : STYLES.find((x) => x.id === style)!.label;
-  const sloganText = slogan ? ` “${titleCase(getSlogan(slogan).lines.join(" "))}”` : "";
+  const sloganText = sloganLines ? ` “${titleCase(sloganLines.join(" "))}”` : "";
   const title = `$${ticker}${sloganText} ${styleLabel} ${blank.label}`;
   const slug = slugify(`${ticker}-${mode === "EXACT" ? "logo" : style}-${slogan ?? ""}-${blankType}`);
   const status = mockupUrls.length ? "ACTIVE" : "DRAFT";

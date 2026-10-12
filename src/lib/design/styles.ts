@@ -76,8 +76,6 @@ export function slogansFor(ticker?: string): Slogan[] {
   ];
 }
 
-export const isSlogan = (v: unknown): v is string => typeof v === "string" && SLOGANS.some((s) => s.id === v);
-
 export const styleUsesSlogan = (style: StyleId) => STYLES.find((s) => s.id === style)?.slogan ?? false;
 
 export function isStyle(v: unknown): v is StyleId {

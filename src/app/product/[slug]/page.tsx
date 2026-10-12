@@ -5,7 +5,8 @@ import { AddToCart } from "@/components/AddToCart";
 import { ProductCard } from "@/components/ProductCard";
 import { formatPrice } from "@/lib/format";
 import { BLANKS, isBlankType, sizeRank } from "@/lib/printful/blanks";
-import { STYLES, getSlogan } from "@/lib/design/styles";
+import { STYLES } from "@/lib/design/styles";
+import { findSlogan } from "@/lib/slogans";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const images = [...product.mockupUrls, product.design.previewUrl].filter((u): u is string => !!u);
   const blank = isBlankType(product.blankType) ? BLANKS[product.blankType] : null;
   const style = STYLES.find((s) => s.id === product.design.style);
-  const slogan = product.design.slogan ? getSlogan(product.design.slogan).lines.join(" ") : null;
+  const slogan = (await findSlogan(product.design.slogan))?.lines.join(" ") ?? null;
   // The coin query used to regenerate the print file at fulfillment time.
   const query = product.query ?? product.design.logo.symbol ?? product.title.replace(/\$/g, "").split(" ")[0];
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCart } from "./CartProvider";
 import { formatPrice } from "@/lib/format";
 import { BLANKS, BLANK_TYPES, type BlankType } from "@/lib/printful/blanks";
-import { DEFAULT_STYLE, STYLES, slogansFor, styleUsesSlogan, type StyleId } from "@/lib/design/styles";
+import { DEFAULT_STYLE, STYLES, slogansFor, styleUsesSlogan, type Slogan, type StyleId } from "@/lib/design/styles";
 
 const APPAREL_SIZES = ["S", "M", "L", "XL", "2XL", "3XL"];
 const STICKER_SIZES = ["3″×3″", "4″×4″", "5.5″×5.5″"];
@@ -34,10 +34,13 @@ export function GenerateClient({
   initialQuery = "",
   initialStyle,
   initialSlogan,
+  trending = [],
 }: {
   initialQuery?: string;
   initialStyle?: StyleId;
   initialSlogan?: string;
+  /** Live trending slogans from the DB, offered above the library. */
+  trending?: Slogan[];
 }) {
   const { add } = useCart();
   const [query, setQuery] = useState(initialQuery);
@@ -54,7 +57,8 @@ export function GenerateClient({
   const sticker = BLANKS[blank].format === "sticker";
   const sizes = sticker ? STICKER_SIZES : APPAREL_SIZES;
   const withSlogan = styleUsesSlogan(style);
-  const slogans = slogansFor(preview?.ticker);
+  const library = slogansFor(preview?.ticker);
+  const slogans = [...trending, ...library];
 
   useEffect(() => {
     if (!sizes.includes(size)) setSize(sticker ? "4″×4″" : "M");
@@ -150,8 +154,27 @@ export function GenerateClient({
 
         {withSlogan && (
           <Step n={3} title="Pick a meme">
+            {trending.length > 0 && (
+              <>
+                <p id="trending" className="display mb-2 scroll-mt-24 text-lg text-[var(--red)]">Trending now</p>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {trending.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSlogan(s.id)}
+                      aria-pressed={slogan === s.id}
+                      className={`chip ${slogan === s.id ? "chip-on" : ""}`}
+                    >
+                      {s.lines.join(" ")}
+                    </button>
+                  ))}
+                </div>
+                <p className="display mb-2 text-lg text-[var(--dim)]">Classics</p>
+              </>
+            )}
             <div className="flex flex-wrap gap-2">
-              {slogans.map((s) => (
+              {library.map((s) => (
                 <button
                   key={s.id}
                   type="button"

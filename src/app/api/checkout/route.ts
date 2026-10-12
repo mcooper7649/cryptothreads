@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { BLANK_TYPES, retailPriceCents, SHIPPING_FLAT_CENTS } from "@/lib/printful/blanks";
-import { STYLE_IDS } from "@/lib/design/styles";
 import { designChoice } from "@/lib/generate";
+import { STYLES, STYLE_IDS } from "@/lib/design/styles";
+import { findSlogan } from "@/lib/slogans";
 import { createStripeCheckout } from "@/lib/payments/stripe";
 import { checkoutOpen, shipCountries, siteUrl } from "@/lib/store-config";
 import { allow, clientIp } from "@/lib/rate-limit";
@@ -62,14 +63,27 @@ export async function POST(req: NextRequest) {
   }
   const site = siteUrl();
 
+  // A slogan that was taken down (or never existed) can't be bought.
+  for (const it of items) {
+    const usesSlogan = STYLES.find((s) => s.id === it.style)?.slogan;
+    if (usesSlogan && it.slogan && !(await findSlogan(it.slogan))) {
+      return NextResponse.json(
+        { error: "slogan unavailable", message: "One of the designs in your bag is no longer available. Remove it and try again." },
+        { status: 400 }
+      );
+    }
+  }
+
   // Recompute prices server-side (never trust client amounts).
-  const priced = items.map((it) => ({
-    ...it,
-    // Snapshot the normalized design so fulfillment reprints exactly this.
-    ...designChoice(it),
-    priceCents: retailPriceCents(it.blankType),
-    title: it.title || `$${it.query.toUpperCase()} ${it.blankType}`,
-  }));
+  const priced = await Promise.all(
+    items.map(async (it) => ({
+      ...it,
+      // Snapshot the normalized design so fulfillment reprints exactly this.
+      ...(await designChoice(it)),
+      priceCents: retailPriceCents(it.blankType),
+      title: it.title || `$${it.query.toUpperCase()} ${it.blankType}`,
+    }))
+  );
   const subtotalCents = priced.reduce((s, i) => s + i.priceCents * i.qty, 0);
   const totalCents = subtotalCents + SHIPPING_FLAT_CENTS;
 

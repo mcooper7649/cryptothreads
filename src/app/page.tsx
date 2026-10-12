@@ -6,6 +6,10 @@ import { BLANKS, BLANK_TYPES } from "@/lib/printful/blanks";
 import { formatPrice } from "@/lib/format";
 import { TIMELINE, TIMELINE_AS_OF } from "@/lib/timeline";
 import { getSlogan } from "@/lib/design/styles";
+import { getTrending } from "@/lib/slogans";
+
+/** Asset URLs are stored absolute (SITE_URL); serve them same-origin so they work behind any host. */
+const sameOrigin = (u: string | null) => (u ? u.replace(/^https?:\/\/[^/]+/, "") : "");
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +26,32 @@ const PILE = [
 ];
 
 export default async function Home() {
-  const [products, drop] = await Promise.all([getActiveProducts(8), getDropNumber()]);
+  const [products, drop, live] = await Promise.all([getActiveProducts(8), getDropNumber(), getTrending(6)]);
+  // Live trending slogans when the collector has found enough, else the hand-picked set.
+  const trending =
+    live.length >= 3
+      ? {
+          live: true,
+          items: live.map((t) => ({
+            slogan: t.id,
+            ticker: t.ticker,
+            style: t.style,
+            text: t.lines.join(" "),
+            seen: t.blurb,
+            image: sameOrigin(t.previewUrl),
+          })),
+        }
+      : {
+          live: false,
+          items: TIMELINE.map((m, i) => ({
+            slogan: m.slogan,
+            ticker: m.ticker,
+            style: m.style,
+            text: getSlogan(m.slogan).lines.join(" "),
+            seen: m.seen,
+            image: `/brand/meme-${i}.png`,
+          })),
+        };
 
   return (
     // Clip sideways: the tilted disclaimer band pokes past the viewport on phones.
@@ -87,16 +116,23 @@ export default async function Home() {
         )}
       </section>
 
-      {/* Memes from crypto X, each one opens in the studio ready to buy */}
+      {/* Trending memes: auto-published daily by the trend collector; each opens in the studio ready to buy */}
       <section className="mx-auto max-w-7xl px-4 py-12">
-        <div className="mb-8 border-b-2 border-[var(--line)] pb-4">
-          <h2 className="display text-5xl sm:text-6xl">On the timeline</h2>
-          <p className="mt-2 text-[var(--dim)]">
-            What crypto X was posting in {TIMELINE_AS_OF}. Tap one to put it on a shirt, or swap in your own coin.
-          </p>
+        <div className="mb-8 flex items-end justify-between gap-4 border-b-2 border-[var(--line)] pb-4">
+          <div>
+            <h2 className="display text-5xl sm:text-6xl">Trending</h2>
+            <p className="mt-2 text-[var(--dim)]">
+              {trending.live
+                ? "Pulled from crypto X and Reddit, refreshed daily. Tap one to put it on a shirt, or swap in your own coin."
+                : `What crypto X was posting in ${TIMELINE_AS_OF}. Tap one to put it on a shirt, or swap in your own coin.`}
+            </p>
+          </div>
+          <Link href="/generate?style=slogan#trending" className="display shrink-0 text-xl text-[var(--acid)] hover:underline">
+            All memes
+          </Link>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          {TIMELINE.map((m, i) => (
+          {trending.items.map((m) => (
             <Link
               key={m.slogan}
               href={`/generate?q=${m.ticker}&style=${m.style}&slogan=${m.slogan}`}
@@ -105,15 +141,13 @@ export default async function Home() {
               <div className="garment aspect-[5/6] border-2 border-[var(--line)] p-3 transition-colors group-hover:border-[var(--acid)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`/brand/meme-${i}.png`}
-                  alt={`$${m.ticker} “${getSlogan(m.slogan).lines.join(" ")}” design`}
+                  src={m.image}
+                  alt={`$${m.ticker} “${m.text}” design`}
                   className="h-full w-full object-contain"
                   loading="lazy"
                 />
               </div>
-              <div className="display mt-2 text-2xl group-hover:text-[var(--acid)]">
-                {getSlogan(m.slogan).lines.join(" ")}
-              </div>
+              <div className="display mt-2 text-2xl group-hover:text-[var(--acid)]">{m.text}</div>
               <p className="text-sm text-[var(--dim)]">{m.seen}</p>
             </Link>
           ))}
