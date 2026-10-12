@@ -20,7 +20,7 @@ X_STATE = os.environ.get("X_STATE", "")  # saved X session (storage_state.json);
 SUBS = ["CryptoCurrency", "memecoins", "Bitcoin", "solana", "SatoshiStreetBets"]
 X_SEARCHES = ["crypto meme", "memecoin", "crypto twitter"]
 STYLES = ["slogan", "box", "chart", "receipt", "stamp", "pixel"]
-MIN_SCORE = 7
+MIN_SCORE = float(os.environ.get("TRENDS_MIN_SCORE", "6"))
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 
 
@@ -117,14 +117,14 @@ Coins trending on CoinGecko today: {coins}
 Write {n} NEW slogans that riff on today's themes, moods and jokes.
 
 They are JOKES and ATTITUDES, not news headlines. Read top to bottom, the lines form one phrase.
-Good: "CRYPTO IS / BACK / (AGAIN)", "FIND A / MEME AND / PRAY", "DON'T ASK / HOW MUCH / I'M DOWN", "BOUGHT THE / TOP / AGAIN", "MY BAGS / ARE / HEAVY", "GM / (COPE)".
+Good (the right shape; don't reuse them): "BOUGHT THE / TOP / AGAIN", "MY BAGS / ARE / HEAVY", "GM / (COPE)".
 Bad (headlines, word lists, jargon): "SEIZED / RESERVE / STRONG", "MINING / FAILURES / SUCCESS", "XRP / LEADER / COMMUNITY", "ZKCBDC / PATENTED".
 Rules:
 - 1 to 3 lines, each line at most 12 characters, ALL CAPS, only letters, digits, spaces and $'!?,.&()#%+-/
 - A crypto person would laugh and wear it. Self-deprecating degen humor works best.
 - NEVER name a real person, company, exchange, brand, team, cartoon or meme character, or political topic.
 - No profanity, slurs, violence, sex, drugs, or promises of gains (no 100x, no giveaways, no airdrops).
-- Don't copy a post word for word. Distill the joke.
+- Don't copy a post word for word. Distill the joke into something new; every slogan must be about something in today's posts.
 - ticker: a coin it fits, from the CoinGecko list or BTC, ETH, SOL, DOGE, XRP. No $ sign.
 - style: one of {styles}. chart suits pump/dump jokes, receipt suits losses, stamp suits "club" identity, pixel suits gaming jokes, box and slogan suit anything.
 - blurb: under 70 characters, plain words, what it riffs on (for example "Everyone on X says crypto is back. Again."). No names, no @handles.
@@ -161,6 +161,10 @@ def library_slogans():
     return [re.findall(r'"([^"]+)"', m) for m in re.findall(r"lines: \[([^\]]+)\]", src)]
 
 
+EXAMPLES = [["BOUGHT THE", "TOP", "AGAIN"], ["MY BAGS", "ARE", "HEAVY"], ["GM", "(COPE)"]]
+squash = lambda lines: re.sub(r"[^a-z0-9]", "", "".join(lines).lower())
+
+
 def main():
     dry = "--dry-run" in sys.argv
     token = admin_token()
@@ -180,7 +184,10 @@ def main():
     if len(posts) < 10:
         sys.exit("too little input today, skipping")
 
-    slogans = write_slogans(posts, coins, library_slogans(), live)
+    library = library_slogans()
+    slogans = write_slogans(posts, coins, library, live)
+    # The model likes to hand back the examples and existing slogans; drop those.
+    seen = {squash(l) for l in library + live + EXAMPLES}
     candidates = [
         {
             "lines": [str(l) for l in s.get("lines", [])][:5],
@@ -191,10 +198,14 @@ def main():
             "score": float(s.get("strength", 5) or 5),
         }
         for s in slogans
-        if isinstance(s, dict) and s.get("lines")
+        if isinstance(s, dict) and s.get("lines") and squash(map(str, s["lines"])) not in seen
     ]
+    if dry:
+        for c in sorted(candidates, key=lambda c: -c["score"]):
+            if c["score"] < MIN_SCORE:
+                print(f"  (below {MIN_SCORE:g}) {c['score']:>4} {' / '.join(c['lines'])}")
     # Only the ones the model itself rates as wearable go live.
-    candidates = sorted((c for c in candidates if c["score"] >= MIN_SCORE), key=lambda c: -c["score"])[:12]
+    candidates = sorted((c for c in candidates if c["score"] >= MIN_SCORE), key=lambda c: -c["score"])[:8]
     for c in candidates:
         print(f"  {c['score']:>4} {' / '.join(c['lines']):<36} ${c['ticker']:<6} {c['style']:<8} {c['blurb']}")
     if dry or not candidates:
