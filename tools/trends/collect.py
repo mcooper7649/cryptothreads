@@ -20,6 +20,7 @@ X_STATE = os.environ.get("X_STATE", "")  # saved X session (storage_state.json);
 SUBS = ["CryptoCurrency", "memecoins", "Bitcoin", "solana", "SatoshiStreetBets"]
 X_SEARCHES = ["crypto meme", "memecoin", "crypto twitter"]
 STYLES = ["slogan", "box", "chart", "receipt", "stamp", "pixel"]
+MIN_SCORE = 7
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 
 
@@ -47,12 +48,17 @@ def reddit():
     out = []
     ns = {"a": "http://www.w3.org/2005/Atom"}
     for sub in SUBS:
-        try:
-            root = ET.fromstring(http(f"https://www.reddit.com/r/{sub}/top/.rss?t=day&limit=25"))
-            out += [("reddit", e.findtext("a:title", "", ns).strip()) for e in root.findall("a:entry", ns)]
-        except Exception as e:
-            print(f"reddit r/{sub}: {e}", file=sys.stderr)
-        time.sleep(2)
+        for attempt in range(2):
+            try:
+                root = ET.fromstring(http(f"https://www.reddit.com/r/{sub}/top/.rss?t=day&limit=25"))
+                out += [("reddit", e.findtext("a:title", "", ns).strip()) for e in root.findall("a:entry", ns)]
+                break
+            except Exception as e:
+                print(f"reddit r/{sub}: {e}", file=sys.stderr)
+                if "429" not in str(e):
+                    break
+                time.sleep(60)  # unauthenticated RSS is rate limited hard
+        time.sleep(15)
     return out
 
 
@@ -108,7 +114,12 @@ Here is what crypto X and Reddit are posting today:
 
 Coins trending on CoinGecko today: {coins}
 
-Write {n} NEW slogans that riff on today's themes, moods and jokes. Rules:
+Write {n} NEW slogans that riff on today's themes, moods and jokes.
+
+They are JOKES and ATTITUDES, not news headlines. Read top to bottom, the lines form one phrase.
+Good: "CRYPTO IS / BACK / (AGAIN)", "FIND A / MEME AND / PRAY", "DON'T ASK / HOW MUCH / I'M DOWN", "BOUGHT THE / TOP / AGAIN", "MY BAGS / ARE / HEAVY", "GM / (COPE)".
+Bad (headlines, word lists, jargon): "SEIZED / RESERVE / STRONG", "MINING / FAILURES / SUCCESS", "XRP / LEADER / COMMUNITY", "ZKCBDC / PATENTED".
+Rules:
 - 1 to 3 lines, each line at most 12 characters, ALL CAPS, only letters, digits, spaces and $'!?,.&()#%+-/
 - A crypto person would laugh and wear it. Self-deprecating degen humor works best.
 - NEVER name a real person, company, exchange, brand, team, cartoon or meme character, or political topic.
@@ -122,7 +133,7 @@ Write {n} NEW slogans that riff on today's themes, moods and jokes. Rules:
 Reply with JSON only: {{"slogans": [{{"lines": ["..."], "ticker": "...", "style": "...", "blurb": "...", "strength": 7, "source": "x" or "reddit"}}]}}"""
 
 
-def write_slogans(posts, coins, existing, live, n=12):
+def write_slogans(posts, coins, existing, live, n=20):
     body = {
         "model": MODEL,
         "stream": False,
@@ -181,7 +192,9 @@ def main():
         }
         for s in slogans
         if isinstance(s, dict) and s.get("lines")
-    ][:30]
+    ]
+    # Only the ones the model itself rates as wearable go live.
+    candidates = sorted((c for c in candidates if c["score"] >= MIN_SCORE), key=lambda c: -c["score"])[:12]
     for c in candidates:
         print(f"  {c['score']:>4} {' / '.join(c['lines']):<36} ${c['ticker']:<6} {c['style']:<8} {c['blurb']}")
     if dry or not candidates:

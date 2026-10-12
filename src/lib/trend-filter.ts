@@ -19,6 +19,9 @@ const BLOCKED = [
   "nike", "adidas", "supreme", "gucci", "apple", "tesla", "spacex", "nintendo", "simpsons", "spongebob",
   "coinbase", "binance", "robinhood", "blackrock", "kraken", "opensea", "ftx", "fifa", "olympic",
   "starbucks", "mcdonald", "cocacola", "pepsi", "playboy", "harrypotter", "starwars",
+  "microsoft", "google", "amazon", "facebook", "instagram", "tiktok", "youtube", "openai", "chatgpt", "nvidia",
+  "paypal", "mastercard", "venmo", "cashapp", "jpmorgan", "goldman", "fidelity", "vanguard", "metamask",
+  "phantom", "trezor", "polymarket", "pumpfun", "kalshi", "hyperliquid",
   // real people
   "musk", "trump", "biden", "harris", "obama", "saylor", "vitalik", "buterin", "changpeng",
   "bankman", "dokwon", "gensler", "powell", "jpow", "zelensk", "netanyahu", "kanye", "diddy",
