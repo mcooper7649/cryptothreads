@@ -33,6 +33,7 @@ export function getFonts(): SatoriFont[] {
     f("Monoton", "Monoton-Regular.ttf", 400),
     f("Abril Fatface", "AbrilFatface-Regular.ttf", 400),
     f("Cinzel Decorative", "CinzelDecorative-Bold.ttf", 700),
+    f("Londrina Solid", "LondrinaSolid-Black.ttf", 900),
     {
       name: "Archivo Black",
       data: readFileSync(path.join(FONT_DIR, "ArchivoBlack-Regular.ttf")),

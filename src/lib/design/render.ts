@@ -1,6 +1,7 @@
 import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
 import sharp from "sharp";
+import { nounArt } from "./nouns";
 import { getFonts } from "./fonts";
 import { rasterizeLogo } from "./logo-raster";
 import { extractPalette } from "./palette";
@@ -168,6 +169,14 @@ export async function renderPrintFile(input: RenderInput): Promise<RenderOutput>
     fg,
     slogan: input.sloganLines ?? getSlogan(input.slogan).lines,
   };
+  if (templateName(input) === "nouns") {
+    // Same coin + slogan always gets the same Noun.
+    const noun = await nounArt(`${input.ticker}:${props.slogan.join(" ")}`);
+    if (noun) {
+      props.art = noun.dataUri;
+      props.artLabel = `NOUN ${noun.id}`;
+    }
+  }
 
   const element = TEMPLATES[templateName(input)](props);
   const sticker = input.format === "sticker";

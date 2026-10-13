@@ -253,3 +253,25 @@ export function Tarot(p: TemplateProps) {
     </div>
   );
 }
+
+/* -------------------------------------------------------------- nouns */
+
+/**
+ * A real Noun (CC0, onchain pixel art) as the hero, slogan underneath in the
+ * Nouns community's chunky type. Falls back to the slogan alone if the art is missing.
+ */
+export function Nouns(p: TemplateProps) {
+  const size = fitLines(p.slogan, 3900, 0.5, 820);
+  const art = 2700;
+  return (
+    <div style={frame()}>
+      {p.art && <img src={p.art} width={art} height={art} style={{ borderRadius: 90 }} />}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 150 }}>
+        <Lines lines={p.slogan} style={{ fontFamily: "Londrina Solid", fontSize: size, lineHeight: 0.95, color: "#ffffff" }} />
+      </div>
+      <div style={{ display: "flex", fontFamily: "Londrina Solid", fontSize: 170, letterSpacing: 12, color: "#d5d7e1", marginTop: 90 }}>
+        {`${p.artLabel ?? "NOUNS"} · ${p.ticker.toUpperCase()} · CC0`}
+      </div>
+    </div>
+  );
+}

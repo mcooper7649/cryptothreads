@@ -46,7 +46,7 @@ BAIT = re.compile(
     r"\b1000x\b.*\?|\b100x\b.*\?|under \d+k? ?m?c\b|make me buy|ready for this bull",
     re.I,
 )
-STYLES = ["slogan", "box", "chart", "receipt", "stamp", "pixel", "gothic", "warning", "headline", "vapor", "terminal", "tarot"]
+STYLES = ["slogan", "box", "chart", "receipt", "stamp", "pixel", "gothic", "warning", "headline", "vapor", "terminal", "tarot", "nouns"]
 MIN_SCORE = float(os.environ.get("TRENDS_MIN_SCORE", "6"))
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 
@@ -261,6 +261,7 @@ Rules:
   gothic = blackletter streetwear (short, ominous: "DEV / SOLD"); warning = hazard label ("MAY CAUSE / SUDDEN / LIQUIDATION");
   headline = newspaper front page ("LOCAL MAN / BUYS TOP / AGAIN"); vapor = vaporwave nostalgia ("WE'RE SO / BACK");
   terminal = green command line, nerdy/onchain jokes; tarot = a card name ("THE / JEET", "THE / EXIT LIQUIDITY");
+  nouns = a real Noun (public-domain NFT pixel character) above the slogan: best for NFT-culture and short punchy lines;
   chart = pump/dump jokes; receipt = losses; stamp = short club identity; pixel = gaming; slogan/box = anything.
   Wordy slogans (3 lines or 20+ characters) fit slogan, box, receipt, warning or headline best.
 - Lean degen: the trenches, rugs, jeets, bundles, exit liquidity, perps and liquidations, airdrop farming, "it's so over / we're so back",

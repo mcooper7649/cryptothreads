@@ -17,6 +17,7 @@ export const STYLES = [
   { id: "vapor", label: "Vaporwave", blurb: "Striped sunset, neon grid, 1999 energy", slogan: true },
   { id: "terminal", label: "Terminal", blurb: "Green CRT command line", slogan: true },
   { id: "tarot", label: "Tarot", blurb: "Gold tarot card with your coin as the sigil", slogan: true },
+  { id: "nouns", label: "Nouns", blurb: "A real Noun (public-domain NFT art) with your slogan", slogan: true },
 ] as const;
 
 export type StyleId = (typeof STYLES)[number]["id"];
