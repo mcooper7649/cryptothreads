@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     running = true;
     try {
       const retired = await retireTrendProducts().catch((e) => ({ error: (e as Error).message }));
-      const made = await productizeTrending(limit);
+      const made = await productizeTrending(limit, drop?.sloganIds ?? []);
       const post = drop ? await createDrop(drop).catch((e) => (console.error("[drop]", e), null)) : null;
       console.log("[productize]", JSON.stringify({ ...made, retired, drop: post?.slug ?? null }));
       return { ...made, retired, drop: post?.slug ?? null };

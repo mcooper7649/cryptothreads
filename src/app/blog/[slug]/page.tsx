@@ -30,8 +30,9 @@ export default async function DropPage({ params }: { params: { slug: string } })
 
   const [slogans, products, number] = await Promise.all([
     prisma.trendingSlogan.findMany({ where: { id: { in: post.sloganIds } } }),
+    // Live, by slogan: products finished after the drop was posted belong to it too.
     prisma.product.findMany({
-      where: { id: { in: post.productIds }, status: "ACTIVE" },
+      where: post.sloganIds.length ? { status: "ACTIVE", design: { slogan: { in: post.sloganIds } } } : { id: { in: post.productIds }, status: "ACTIVE" },
       include: { design: { include: { logo: true } } },
     }),
     prisma.contentPost.count({ where: { publishedAt: { lte: post.publishedAt } } }),

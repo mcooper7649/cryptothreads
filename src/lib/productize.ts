@@ -26,7 +26,7 @@ const LINEUP: { blankType: BlankType; minScore: number }[] = [
 ];
 
 /** Make products for the hottest live trending slogans that are missing them. */
-export async function productizeTrending(limit = PER_RUN) {
+export async function productizeTrending(limit = PER_RUN, firstIds: string[] = []) {
   const live = await prisma.trendingSlogan.findMany({ where: { hidden: false, expiresAt: { gt: new Date() } } });
   const existing = await prisma.product.findMany({
     where: { design: { slogan: { in: live.map((t) => t.id) } } },
@@ -34,7 +34,9 @@ export async function productizeTrending(limit = PER_RUN) {
   });
   const have = new Set(existing.map((p) => `${p.design.slogan}:${p.blankType}`));
   const todo: { t: (typeof live)[number]; blankType: BlankType }[] = [];
-  for (const t of live.sort((a, b) => sloganHeat(b) - sloganHeat(a))) {
+  // This run's new slogans first (so their drop is complete), then the rest by heat.
+  const first = new Set(firstIds);
+  for (const t of live.sort((a, b) => Number(first.has(b.id)) - Number(first.has(a.id)) || sloganHeat(b) - sloganHeat(a))) {
     for (const { blankType, minScore } of LINEUP) {
       if (t.score >= minScore && !have.has(`${t.id}:${blankType}`)) todo.push({ t, blankType });
     }

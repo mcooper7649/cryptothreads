@@ -39,7 +39,8 @@ export async function createDrop(d: DropInput) {
       bodyMdx: intro,
       coinRefs: Array.from(new Set(withProducts.map((s) => s.ticker))),
       productIds: products.filter((p) => withProducts.some((s) => s.id === p.design.slogan)).map((p) => p.id),
-      sloganIds: withProducts.map((s) => s.id),
+      // Every slogan of the run: products that finish later show up on the page by themselves.
+      sloganIds: [...withProducts, ...slogans.filter((s) => !withProducts.includes(s))].map((s) => s.id),
       coverUrl: withProducts[0].previewUrl,
       ...(d.publishedAt ? { publishedAt: d.publishedAt } : {}),
     },
