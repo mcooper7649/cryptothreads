@@ -78,6 +78,7 @@ export async function fulfillOrder(orderId: string): Promise<void> {
       technique: blank.technique,
       fileId: file.id,
       extra: await fillPlacements(blank),
+      options: blank.options,
     });
   }
 

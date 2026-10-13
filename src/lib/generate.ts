@@ -230,6 +230,7 @@ export async function printfulListing(asset: PrintAsset, blankType: BlankType) {
           technique: blank.technique,
           fileId: file.id,
           extra: await fillPlacements(blank),
+          options: blank.options,
         });
         // Printful's mockup URLs are temporary (/tmp/ on S3), so keep our own copies.
         mockupUrls = [];

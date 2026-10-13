@@ -21,6 +21,7 @@ export interface OrderItemInput {
   fileId?: number;
   fileUrl?: string;
   extra?: ExtraPlacement[];
+  options?: { name: string; value: string }[];
 }
 
 interface OrderResponse {
@@ -36,6 +37,7 @@ function itemPayload(it: OrderItemInput) {
     source: "catalog",
     catalog_variant_id: it.catalogVariantId,
     quantity: it.quantity,
+    ...(it.options?.length ? { product_options: it.options } : {}),
     placements: [
       {
         placement: it.placement,

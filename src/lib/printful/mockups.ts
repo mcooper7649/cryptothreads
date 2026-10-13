@@ -12,6 +12,7 @@ export interface MockupRequest {
   format?: "png" | "jpg";
   /** More print areas on the same product (e.g. solid panels on all-over prints). */
   extra?: ExtraPlacement[];
+  options?: { name: string; value: string }[];
 }
 
 export interface ExtraPlacement {
@@ -49,6 +50,7 @@ export async function createMockupTask(
         catalog_product_id: req.catalogProductId,
         catalog_variant_ids: req.catalogVariantIds,
         ...(req.mockupStyleIds ? { mockup_style_ids: req.mockupStyleIds } : {}),
+        ...(req.options?.length ? { product_options: req.options } : {}),
         placements: [
           {
             placement: req.placement,

@@ -47,6 +47,8 @@ export interface BlankConfig {
    * unprinted fabric), in inches at 150 DPI.
    */
   fills?: { placement: string; w: number; h: number }[];
+  /** Required Printful product options (e.g. stitch color on all-over prints). */
+  options?: { name: string; value: string }[];
   /** Printful cost of a typical variant when we checked, for margin sanity checks. */
   costCents: number;
 }
@@ -121,6 +123,7 @@ export const BLANKS: Record<BlankType, BlankConfig> = {
       { placement: "bottom", w: 28, h: 5 },
       { placement: "pocket", w: 13, h: 8 },
     ],
+    options: [{ name: "stitch_color", value: "black" }],
   },
 };
 
