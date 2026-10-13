@@ -15,6 +15,20 @@ import { bumpProduct, isBot } from "@/lib/signals";
 
 export const dynamic = "force-dynamic";
 
+/** How each kind of blank is described in copy. */
+const KIND: Record<string, (label: string) => string> = {
+  apparel: (l) => `${l.toLowerCase()} on black`,
+  sticker: () => "vinyl sticker",
+  mug: () => "black-wrap ceramic mug",
+  hat: () => "black dad hat",
+};
+const DETAILS: Record<string, string> = {
+  apparel: "Printed on a black garment, front print, direct-to-garment.",
+  sticker: "Kiss-cut vinyl sticker with a black backing. Waterproof and laptop-ready.",
+  mug: "Glossy ceramic mug with a black wrap and the design on both sides. Dishwasher and microwave safe.",
+  hat: "Black cotton dad hat, adjustable strap, full-color print on the front.",
+};
+
 interface Variant {
   variantId: number;
   size?: string;
@@ -28,7 +42,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const sym = (product.query ?? product.design.logo.symbol ?? "").toUpperCase();
   const coin = coinDisplayName(sym, product.design.logo.name) ?? sym;
   const description =
-    `${product.title}: ${coin} ${blank?.format === "sticker" ? "vinyl sticker" : `${(blank?.label ?? "shirt").toLowerCase()} on black`}, ` +
+    `${product.title}: ${coin} ${KIND[blank?.format ?? "apparel"](blank?.label ?? "shirt")}, ` +
     `printed on demand for ${formatPrice(product.priceCents)}. Ships in the US for a flat $5. Pay by card or USDC.`;
   const image = onSite(product.mockupUrls[0] ?? product.design.previewUrl);
   return {
@@ -68,9 +82,9 @@ export default async function ProductPage({ params }: { params: { slug: string }
               name: product.title,
               url: abs(`/product/${product.slug}`),
               image: images.map((u) => onSite(u)),
-              description: `${product.title}, printed on demand on a black ${blank?.label.toLowerCase() ?? "garment"}.`,
+              description: `${product.title}: ${KIND[blank?.format ?? "apparel"](blank?.label ?? "shirt")}, printed on demand.`,
               brand: { "@type": "Brand", name: SITE_NAME },
-              category: blank?.format === "sticker" ? "Stickers" : "Apparel",
+              category: { sticker: "Stickers", mug: "Mugs", hat: "Hats", apparel: "Apparel" }[blank?.format ?? "apparel"],
               offers: {
                 "@type": "Offer",
                 url: abs(`/product/${product.slug}`),
@@ -152,9 +166,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
           <ul className="mt-8 space-y-2 border-t-2 border-[var(--line)] pt-6 text-sm text-[var(--dim)]">
             <li>
-              {blank?.format === "sticker"
-                ? "Kiss-cut vinyl sticker with a black backing. Waterproof and laptop-ready."
-                : "Printed on a black garment, front print, direct-to-garment."}
+              {DETAILS[blank?.format ?? "apparel"]}
             </li>
             <li>Made after you order, then shipped to the US for a flat $5. Usually 5–12 business days.</li>
             <li>

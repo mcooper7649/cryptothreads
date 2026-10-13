@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Make your own crypto shirt",
   description:
-    "Design a crypto shirt in seconds: type any ticker or project website, pick a meme and a style, and we print it on a tee, hoodie or sticker.",
+    "Design a crypto shirt in seconds: type any ticker or project website, pick a meme and a style, and we print it on a tee, hoodie, tank, hat, mug or sticker.",
   alternates: { canonical: "/generate" },
 };
 

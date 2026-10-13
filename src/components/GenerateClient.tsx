@@ -4,11 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCart } from "./CartProvider";
 import { formatPrice } from "@/lib/format";
-import { BLANKS, BLANK_TYPES, type BlankType } from "@/lib/printful/blanks";
+import { BLANKS, CATEGORIES, blanksIn, typicalSize, type BlankType } from "@/lib/printful/blanks";
 import { DEFAULT_STYLE, STYLES, slogansFor, styleUsesSlogan, type Slogan, type StyleId } from "@/lib/design/styles";
 
-const APPAREL_SIZES = ["S", "M", "L", "XL", "2XL", "3XL"];
-const STICKER_SIZES = ["3″×3″", "4″×4″", "5.5″×5.5″"];
 const EXAMPLES = ["BTC", "DOGE", "ETH", "SOL", "PEPE", "uniswap.org"];
 
 interface Preview {
@@ -54,15 +52,15 @@ export function GenerateClient({
   const [added, setAdded] = useState(false);
   const seq = useRef(0);
 
-  const sticker = BLANKS[blank].format === "sticker";
-  const sizes = sticker ? STICKER_SIZES : APPAREL_SIZES;
+  const format = BLANKS[blank].format;
+  const sizes = BLANKS[blank].sizes;
   const withSlogan = styleUsesSlogan(style);
   const library = slogansFor(preview?.ticker);
   const slogans = [...trending, ...library];
 
   useEffect(() => {
-    if (!sizes.includes(size)) setSize(sticker ? "4″×4″" : "M");
-  }, [sticker, sizes, size]);
+    if (!sizes.includes(size)) setSize(typicalSize(BLANKS[blank]));
+  }, [blank, sizes, size]);
 
   useEffect(() => {
     const q = query.trim();
@@ -93,9 +91,9 @@ export function GenerateClient({
       }
     }, 400);
     return () => clearTimeout(t);
-    // Garment changes only matter when switching between apparel and sticker formats.
+    // Garment changes only matter when the print format changes (apparel, sticker, mug, hat).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, style, slogan, sticker]);
+  }, [query, style, slogan, format]);
 
   const price = BLANKS[blank].priceCents;
   const styleLabel = STYLES.find((s) => s.id === style)!.label;
@@ -191,20 +189,27 @@ export function GenerateClient({
         )}
 
         <Step n={withSlogan ? 4 : 3} title="Pick a product">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {BLANK_TYPES.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setBlank(t)}
-                aria-pressed={blank === t}
-                className={`flex items-center justify-between gap-2 border-2 px-3 py-2.5 text-left ${
-                  blank === t ? "border-[var(--acid)] bg-[var(--acid)] text-[var(--ink)]" : "border-[var(--line)] hover:border-[var(--white)]"
-                }`}
-              >
-                <span className="display text-xl">{BLANKS[t].label}</span>
-                <span className="text-sm font-bold">{formatPrice(BLANKS[t].priceCents)}</span>
-              </button>
+          <div className="space-y-4">
+            {CATEGORIES.map((c) => (
+              <div key={c.id}>
+                <p className="label">{c.label}</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {blanksIn(c.id).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setBlank(t)}
+                      aria-pressed={blank === t}
+                      className={`flex items-center justify-between gap-2 border-2 px-3 py-2.5 text-left ${
+                        blank === t ? "border-[var(--acid)] bg-[var(--acid)] text-[var(--ink)]" : "border-[var(--line)] hover:border-[var(--white)]"
+                      }`}
+                    >
+                      <span className="display text-xl">{BLANKS[t].label}</span>
+                      <span className="text-sm font-bold">{formatPrice(BLANKS[t].priceCents)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
           <fieldset className="mt-5">

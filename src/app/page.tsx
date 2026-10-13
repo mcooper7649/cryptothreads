@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getActiveProducts, getDropNumber } from "@/lib/queries";
 import { ProductCard } from "@/components/ProductCard";
 import { STYLES } from "@/lib/design/styles";
-import { BLANKS, BLANK_TYPES } from "@/lib/printful/blanks";
+import { BLANKS, CATEGORIES, blanksIn } from "@/lib/printful/blanks";
 import { formatPrice } from "@/lib/format";
 import { TIMELINE, TIMELINE_AS_OF } from "@/lib/timeline";
 import { getSlogan } from "@/lib/design/styles";
@@ -97,7 +97,7 @@ export default async function Home() {
           </h1>
           <p className="mt-6 max-w-md text-lg text-[var(--dim)]">
             Crypto streetwear, printed on demand. Pick any coin, pick a meme, and we print it on a
-            black tee, hoodie or sticker. Pay by card or USDC.
+            black tee, hoodie, tank, hat or mug. Pay by card or USDC.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link href="/shop" className="btn-acid">Shop the drop</Link>
@@ -263,16 +263,25 @@ export default async function Home() {
       {/* The rack */}
       <section className="mx-auto max-w-7xl px-4 py-12">
         <h2 className="display mb-6 border-b-2 border-[var(--line)] pb-4 text-5xl sm:text-6xl">The rack</h2>
-        <ul className="grid grid-cols-2 gap-px border-2 border-[var(--line)] bg-[var(--line)] sm:grid-cols-3 lg:grid-cols-6">
-          {BLANK_TYPES.map((t) => (
-            <li key={t}>
-              <Link href={`/shop?type=${t}`} className="flex h-full flex-col justify-between gap-6 bg-[var(--ink)] p-4 hover:bg-[var(--ink-2)]">
-                <span className="display text-2xl">{BLANKS[t].label}</span>
-                <span className="price-tag self-start">{formatPrice(BLANKS[t].priceCents)}</span>
+        <div className="space-y-8">
+          {CATEGORIES.map((c) => (
+            <div key={c.id}>
+              <Link href={`/shop?dept=${c.id}`} className="display mb-3 inline-block text-2xl text-[var(--acid)] hover:underline">
+                {c.label}
               </Link>
-            </li>
+              <ul className="grid grid-cols-2 gap-px border-2 border-[var(--line)] bg-[var(--line)] sm:grid-cols-3 lg:grid-cols-6">
+                {blanksIn(c.id).map((t) => (
+                  <li key={t}>
+                    <Link href={`/shop?dept=${c.id}&type=${t}`} className="flex h-full flex-col justify-between gap-6 bg-[var(--ink)] p-4 hover:bg-[var(--ink-2)]">
+                      <span className="display text-2xl">{BLANKS[t].label}</span>
+                      <span className="price-tag self-start">{formatPrice(BLANKS[t].priceCents)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
     </div>
   );

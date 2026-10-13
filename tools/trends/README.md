@@ -22,8 +22,9 @@
    they stay in the studio, ends duds early (≥ 40 views, no carts after 48h), retires
    coin products whose 24h volume drops under $2M (back above $4M → back in the shop),
    and prints community ideas that reached 5 votes;
-6. starts a background job (`POST /api/admin/productize?async=1&limit=20`) that gives the
-   hottest live memes a tee each, plus a hoodie when the writer scored them 8+, with
+6. starts a background job (`POST /api/admin/productize?async=1&limit=30`) that gives the
+   hottest live memes a tee each; 8+ adds a hoodie and women's tee, 9+ tanks, a dad hat and a
+   mug (LINEUP in `src/lib/productize.ts`), with
    Printful mockups, so they show in the shop and on coin pages (progress in
    `docker logs cryptothreads-app | grep productize`). Trend
    products whose slogan expired a day ago with no carts or orders go back to DRAFT;

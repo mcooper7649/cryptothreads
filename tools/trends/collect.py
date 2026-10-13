@@ -408,9 +408,9 @@ def main():
 
     m = json.loads(http(f"{API}/api/admin/maintain", {"likes": likes}, {"x-admin-token": token}, timeout=600))
     print(f"maintain: {json.dumps(m)}")
-    # New memes become shop products (tees, plus hoodies for 8+). Printful mockups are
+    # New memes become shop products (tee; 8+ adds hoodie + women's tee; 9+ tanks, hat, mug). Mockups are
     # slow, so the app builds them in the background (log: docker logs cryptothreads-app).
-    p = json.loads(http(f"{API}/api/admin/productize?async=1&limit=20", {}, {"x-admin-token": token}, timeout=60))
+    p = json.loads(http(f"{API}/api/admin/productize?async=1&limit=30", {}, {"x-admin-token": token}, timeout=60))
     print(f"productize: {json.dumps(p)}")
 
 

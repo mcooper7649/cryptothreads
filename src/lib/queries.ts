@@ -11,6 +11,8 @@ export type ProductWithDesign = Product & { design: Design & { logo: LogoCache }
 
 export interface ProductFilter {
   blankType?: string;
+  /** Any of these blank types (a shop department). */
+  blankTypes?: string[];
   style?: string;
   coin?: string;
   /** "hot" ranks by sales, carts and views (with a boost while new); default is newest first. */
@@ -22,7 +24,7 @@ export async function getActiveProducts(limit = 24, f: ProductFilter = {}): Prom
     const rows = await prisma.product.findMany({
       where: {
         status: "ACTIVE",
-        ...(f.blankType ? { blankType: f.blankType } : {}),
+        ...(f.blankType ? { blankType: f.blankType } : f.blankTypes ? { blankType: { in: f.blankTypes } } : {}),
         ...(f.style ? { design: { style: f.style } } : {}),
         ...(f.coin ? { query: { equals: f.coin, mode: "insensitive" } } : {}),
       },

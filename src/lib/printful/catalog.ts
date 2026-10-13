@@ -27,8 +27,10 @@ export async function getCatalogVariants(
 
 /** Variants we list for a blank: black garments, or square stickers (not the bumper size). */
 export function sellableVariants(blank: BlankConfig, variants: CatalogVariant[]): CatalogVariant[] {
-  if (blank.format === "sticker") return variants.filter((v) => /^([\d.]+)″×\1″$/.test(v.size || ""));
-  return darkVariants(variants);
+  const sized = variants.filter((v) => blank.sizes.includes(v.size || ""));
+  if (blank.format === "sticker") return sized;
+  if (blank.color) return sized.filter((v) => (v.color || "").toLowerCase() === blank.color!.toLowerCase());
+  return darkVariants(sized);
 }
 
 /**

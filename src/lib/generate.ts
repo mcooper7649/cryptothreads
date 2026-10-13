@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { resolveLogo, fetchLogoFromSources } from "@/lib/logo/resolve";
 import { renderPrintFile } from "@/lib/design/render";
 import { putAsset, readAsset } from "@/lib/storage";
-import { getBlank, BlankType, retailPriceCents } from "@/lib/printful/blanks";
+import { getBlank, BlankType, retailPriceCents, typicalSize } from "@/lib/printful/blanks";
 import { uploadFile } from "@/lib/printful/files";
 import { generateMockups } from "@/lib/printful/mockups";
 import { getCatalogVariants, getVariantBasePrice, sellableVariants } from "@/lib/printful/catalog";
@@ -223,8 +223,8 @@ export async function printfulListing(asset: PrintAsset, blankType: BlankType) {
       if (variantIds.length) {
         const mocks = await generateMockups({
           catalogProductId: blank.catalogProductId,
-          // One mockup is enough: every variant is the same color (or the same sticker).
-          catalogVariantIds: [(chosen.find((v) => v.size === "M" || v.size === "4″×4″") ?? chosen[0]).id],
+          // One mockup is enough: every variant is the same color (or the same sticker/mug).
+          catalogVariantIds: [(chosen.find((v) => v.size === typicalSize(blank)) ?? chosen[0]).id],
           placement: blank.placement,
           technique: blank.technique,
           fileId: file.id,
@@ -242,7 +242,7 @@ export async function printfulListing(asset: PrintAsset, blankType: BlankType) {
         // Retail price is fixed per blank (the same price checkout charges);
         // the Printful cost is recorded so the admin can watch margins.
         // Record the cost of a typical size (M) rather than whichever variant is listed first.
-        const typical = chosen.find((v) => v.size === "M" || v.size === "4″×4″") ?? chosen[0];
+        const typical = chosen.find((v) => v.size === typicalSize(blank)) ?? chosen[0];
         const cost = await getVariantBasePrice(typical.id, blank.technique);
         if (cost != null) baseCostCents = Math.round(cost * 100);
         variants = chosen.map((v) => ({

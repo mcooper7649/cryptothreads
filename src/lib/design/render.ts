@@ -25,8 +25,11 @@ export interface RenderInput {
   slogan?: string;
   /** Slogan lines to print, overriding `slogan` (trending slogans live in the DB). */
   sloganLines?: string[];
-  /** "sticker" puts the design on a black rounded square sized for kiss-cut stickers. */
-  format?: "apparel" | "sticker";
+  /**
+   * "sticker" puts the design on a black rounded square sized for kiss-cut stickers;
+   * "mug" lays it twice on a black 9"x3.5" wrap; "hat" fits it into a 5"x2" front panel.
+   */
+  format?: "apparel" | "sticker" | "mug" | "hat";
   accent?: string; // override palette-derived accent
   /** Skip the full-resolution print file and rasterize only the web preview (~25x cheaper). */
   previewOnly?: boolean;
@@ -66,6 +69,42 @@ async function toSticker(png: Buffer, size: number): Promise<Buffer> {
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${r}" fill="${STICKER_BG}"/></svg>`
   );
   return sharp(bg).composite([{ input: art, gravity: "center" }]).png().toBuffer();
+}
+
+// Mug wrap: 9" x 3.5" at 300 DPI (11 oz; Printful scales it for 15 oz). Sublimation
+// can't print white, so the wrap is solid black with the art on both sides.
+const MUG_W = 2700;
+const MUG_H = 1050;
+// Dad hat DTF front: 5" x 2" at 300 DPI, transparent (DTF prints white).
+const HAT_W = 1500;
+const HAT_H = 600;
+
+/** Trimmed art fitted into a box. */
+async function fit(png: Buffer, w: number, h: number): Promise<Buffer> {
+  return sharp(png).trim({ threshold: 1 }).resize({ width: w, height: h, fit: "inside" }).png().toBuffer();
+}
+
+async function toMug(png: Buffer, w = MUG_W, h = MUG_H): Promise<Buffer> {
+  const half = Math.round(w / 2);
+  const art = await fit(png, Math.round(half * 0.8), Math.round(h * 0.84));
+  const meta = await sharp(art).metadata();
+  const top = Math.round((h - (meta.height ?? 0)) / 2);
+  const left = (center: number) => Math.round(center - (meta.width ?? 0) / 2);
+  return sharp({ create: { width: w, height: h, channels: 4, background: STICKER_BG } })
+    .composite([
+      { input: art, top, left: left(w * 0.25) },
+      { input: art, top, left: left(w * 0.75) },
+    ])
+    .png()
+    .toBuffer();
+}
+
+async function toHat(png: Buffer, w = HAT_W, h = HAT_H): Promise<Buffer> {
+  const art = await fit(png, Math.round(w * 0.96), Math.round(h * 0.96));
+  return sharp({ create: { width: w, height: h, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: art, gravity: "center" }])
+    .png()
+    .toBuffer();
 }
 
 /** logo (any format) + text -> print-ready transparent PNG + web preview. */
@@ -117,6 +156,19 @@ export async function renderPrintFile(input: RenderInput): Promise<RenderOutput>
         .render()
         .asPng()
     );
+
+  if (input.format === "mug" || input.format === "hat") {
+    const mug = input.format === "mug";
+    const [w, h] = mug ? [MUG_W, MUG_H] : [HAT_W, HAT_H];
+    const lay = mug ? toMug : toHat;
+    // Previews show the panel on black so the white art is visible on the page.
+    const preview = async () => {
+      const panel = await lay(raster(PREVIEW_W * 2), PREVIEW_W, Math.round((PREVIEW_W * h) / w));
+      return mug ? panel : sharp(panel).flatten({ background: STICKER_BG }).png().toBuffer();
+    };
+    if (input.previewOnly) return { printPng: Buffer.alloc(0), previewPng: await preview(), width: w, height: h, accent };
+    return { printPng: await lay(raster(PRINT_W)), previewPng: await preview(), width: w, height: h, accent };
+  }
 
   if (input.previewOnly) {
     const previewPng = sticker ? await toSticker(raster(PREVIEW_W * 2), PREVIEW_W) : raster(PREVIEW_W);

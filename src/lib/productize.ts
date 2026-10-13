@@ -2,17 +2,26 @@ import { prisma } from "@/lib/db";
 import { generateProduct } from "@/lib/generate";
 import { sloganHeat } from "@/lib/signals";
 import type { StyleId } from "@/lib/design/styles";
+import type { BlankType } from "@/lib/printful/blanks";
 
 /**
- * Trending memes become real shop products (a tee each, with Printful
- * mockups), so they show up in the shop, on coin pages and in "Hot off the
+ * Trending memes become real shop products (a tee each, more blanks for
+ * high scorers; see LINEUP), with Printful mockups, so they show up in the shop, on coin pages and in "Hot off the
  * press", not only as studio presets. Run by the collector after each pass.
  */
 
 const PER_RUN = 12;
 const HOUR = 3_600_000;
-/** Every trending slogan gets a tee; strong ones (score 8+) a hoodie too. */
-const HOODIE_AT = 8;
+/** Which blanks a trending slogan gets, by the writer's score: more options for the strongest. */
+const LINEUP: { blankType: BlankType; minScore: number }[] = [
+  { blankType: "tee", minScore: 0 },
+  { blankType: "hoodie", minScore: 8 },
+  { blankType: "womens_tee", minScore: 8 },
+  { blankType: "tank", minScore: 9 },
+  { blankType: "womens_tank", minScore: 9 },
+  { blankType: "hat", minScore: 9 },
+  { blankType: "mug", minScore: 9 },
+];
 
 /** Make products for the hottest live trending slogans that are missing them. */
 export async function productizeTrending(limit = PER_RUN) {
@@ -22,10 +31,11 @@ export async function productizeTrending(limit = PER_RUN) {
     select: { blankType: true, design: { select: { slogan: true } } },
   });
   const have = new Set(existing.map((p) => `${p.design.slogan}:${p.blankType}`));
-  const todo: { t: (typeof live)[number]; blankType: "tee" | "hoodie" }[] = [];
+  const todo: { t: (typeof live)[number]; blankType: BlankType }[] = [];
   for (const t of live.sort((a, b) => sloganHeat(b) - sloganHeat(a))) {
-    if (!have.has(`${t.id}:tee`)) todo.push({ t, blankType: "tee" });
-    if (t.score >= HOODIE_AT && !have.has(`${t.id}:hoodie`)) todo.push({ t, blankType: "hoodie" });
+    for (const { blankType, minScore } of LINEUP) {
+      if (t.score >= minScore && !have.has(`${t.id}:${blankType}`)) todo.push({ t, blankType });
+    }
   }
 
   const made: string[] = [];

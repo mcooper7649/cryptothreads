@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getActiveCoins, getActiveProducts } from "@/lib/queries";
 import { ProductCard } from "@/components/ProductCard";
 import { STYLES, isStyle } from "@/lib/design/styles";
-import { BLANKS, BLANK_TYPES, isBlankType } from "@/lib/printful/blanks";
+import { BLANKS, BLANK_TYPES, CATEGORIES, blanksIn, isBlankType, type Category } from "@/lib/printful/blanks";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -13,7 +13,9 @@ export const metadata = {
   alternates: { canonical: "/shop" },
 };
 
-type Params = { type?: string; style?: string; coin?: string; sort?: string };
+type Params = { dept?: string; type?: string; style?: string; coin?: string; sort?: string };
+
+const isCategory = (v: unknown): v is Category => CATEGORIES.some((c) => c.id === v);
 
 /** Build a shop URL that changes one filter and keeps the others. */
 function href(current: Params, change: Params) {
@@ -32,17 +34,25 @@ function Chip({ to, on, children }: { to: string; on: boolean; children: React.R
 }
 
 export default async function Shop({ searchParams }: { searchParams: Params }) {
+  const dept = isCategory(searchParams.dept) ? searchParams.dept : undefined;
   const current: Params = {
-    type: isBlankType(searchParams.type) ? searchParams.type : undefined,
+    dept,
+    type: isBlankType(searchParams.type) && (!dept || BLANKS[searchParams.type].category === dept) ? searchParams.type : undefined,
     style: isStyle(searchParams.style) ? searchParams.style : undefined,
     coin: searchParams.coin?.toUpperCase().slice(0, 16) || undefined,
     sort: searchParams.sort === "new" ? "new" : undefined, // default: hot
   };
   const [products, coins] = await Promise.all([
-    getActiveProducts(120, { blankType: current.type, style: current.style, coin: current.coin, sort: current.sort === "new" ? "new" : "hot" }),
+    getActiveProducts(120, {
+      blankType: current.type,
+      blankTypes: dept ? [...blanksIn(dept)] : undefined,
+      style: current.style,
+      coin: current.coin,
+      sort: current.sort === "new" ? "new" : "hot",
+    }),
     getActiveCoins(),
   ]);
-  const filtered = Boolean(current.type || current.style || current.coin);
+  const filtered = Boolean(current.dept || current.type || current.style || current.coin);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -60,9 +70,16 @@ export default async function Shop({ searchParams }: { searchParams: Params }) {
           <Chip to={href(current, { sort: "new" })} on={current.sort === "new"}>Newest</Chip>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <span className="label mb-0 mr-2 w-16">Dept</span>
+          <Chip to={href(current, { dept: undefined, type: undefined })} on={!current.dept}>All</Chip>
+          {CATEGORIES.map((c) => (
+            <Chip key={c.id} to={href(current, { dept: c.id, type: undefined })} on={current.dept === c.id}>{c.label}</Chip>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <span className="label mb-0 mr-2 w-16">Type</span>
           <Chip to={href(current, { type: undefined })} on={!current.type}>All</Chip>
-          {BLANK_TYPES.map((t) => (
+          {(dept ? blanksIn(dept) : BLANK_TYPES).map((t) => (
             <Chip key={t} to={href(current, { type: t })} on={current.type === t}>{BLANKS[t].short}</Chip>
           ))}
         </div>
