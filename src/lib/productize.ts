@@ -9,30 +9,38 @@ import type { StyleId } from "@/lib/design/styles";
  * press", not only as studio presets. Run by the collector after each pass.
  */
 
-const PER_RUN = 6;
+const PER_RUN = 12;
 const HOUR = 3_600_000;
+/** Every trending slogan gets a tee; strong ones (score 8+) a hoodie too. */
+const HOODIE_AT = 8;
 
-/** Make a tee for the hottest live trending slogans that don't have a product yet. */
+/** Make products for the hottest live trending slogans that are missing them. */
 export async function productizeTrending(limit = PER_RUN) {
   const live = await prisma.trendingSlogan.findMany({ where: { hidden: false, expiresAt: { gt: new Date() } } });
-  const have = new Set(
-    (await prisma.design.findMany({ where: { slogan: { in: live.map((t) => t.id) } }, select: { slogan: true } })).map((d) => d.slogan)
-  );
-  const todo = live.filter((t) => !have.has(t.id)).sort((a, b) => sloganHeat(b) - sloganHeat(a)).slice(0, limit);
+  const existing = await prisma.product.findMany({
+    where: { design: { slogan: { in: live.map((t) => t.id) } } },
+    select: { blankType: true, design: { select: { slogan: true } } },
+  });
+  const have = new Set(existing.map((p) => `${p.design.slogan}:${p.blankType}`));
+  const todo: { t: (typeof live)[number]; blankType: "tee" | "hoodie" }[] = [];
+  for (const t of live.sort((a, b) => sloganHeat(b) - sloganHeat(a))) {
+    if (!have.has(`${t.id}:tee`)) todo.push({ t, blankType: "tee" });
+    if (t.score >= HOODIE_AT && !have.has(`${t.id}:hoodie`)) todo.push({ t, blankType: "hoodie" });
+  }
 
   const made: string[] = [];
   const failed: string[] = [];
-  for (const t of todo) {
+  for (const { t, blankType } of todo.slice(0, limit)) {
     try {
-      const p = await generateProduct({ query: t.ticker, style: t.style as StyleId, slogan: t.id, blankType: "tee" });
+      const p = await generateProduct({ query: t.ticker, style: t.style as StyleId, slogan: t.id, blankType });
       // DRAFT means Printful didn't return a mockup; it stays out of the shop until a retry works.
       (p.status === "ACTIVE" ? made : failed).push(`${p.slug} (${p.status})`);
     } catch (e) {
-      console.error("[productize]", t.id, e);
-      failed.push(t.id);
+      console.error("[productize]", t.id, blankType, e);
+      failed.push(`${t.id}:${blankType}`);
     }
   }
-  return { made, failed };
+  return { made, failed, queued: Math.max(0, todo.length - limit) };
 }
 
 /**

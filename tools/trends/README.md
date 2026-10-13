@@ -9,7 +9,7 @@
 2. asks Claude (`TRENDS_MODEL`, default `claude-opus-5-5`, low effort, refusal fallbacks
    on) for ~20 slogans in the house voice. Without `ANTHROPIC_API_KEY` it falls back to
    the local Ollama model (`TRENDS_OLLAMA_MODEL`, default `qwen2.5:14b-instruct`);
-3. posts the ones the writer rates ≥ 6 (up to 8) to `POST /api/admin/trending`, which runs
+3. posts the ones the writer rates ≥ 6 (up to 12 of 30) to `POST /api/admin/trending`, which runs
    `src/lib/trend-filter.ts` (length, glyphs, brands, people, politics, slurs, duplicates;
    tickers too), renders a preview and **publishes immediately** for 4 days. A slogan seen
    again gets its expiry extended. Tickers from the vetted lists (CoinGecko, DEX, majors)
@@ -22,8 +22,10 @@
    they stay in the studio, ends duds early (≥ 40 views, no carts after 48h), retires
    coin products whose 24h volume drops under $2M (back above $4M → back in the shop),
    and prints community ideas that reached 5 votes;
-6. turns up to 6 of the hottest new memes into tee products with Printful mockups
-   (`POST /api/admin/productize`), so they show in the shop and on coin pages. Trend
+6. starts a background job (`POST /api/admin/productize?async=1&limit=20`) that gives the
+   hottest live memes a tee each, plus a hoodie when the writer scored them 8+, with
+   Printful mockups, so they show in the shop and on coin pages (progress in
+   `docker logs cryptothreads-app | grep productize`). Trend
    products whose slogan expired a day ago with no carts or orders go back to DRAFT;
    products of hidden slogans are disabled.
 

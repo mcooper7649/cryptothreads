@@ -368,7 +368,7 @@ def main():
         sys.exit("too little input today, skipping")
 
     library = library_slogans()
-    slogans = write_slogans(posts, coins, dex, library, live)
+    slogans = write_slogans(posts, coins, dex, library, live, n=30)
     dex_syms = {c["symbol"] for c in dex}
     vetted = MAJORS | set(coins) | dex_syms
     # The model likes to hand back the examples and existing slogans; drop those.
@@ -393,7 +393,7 @@ def main():
             if c["score"] < MIN_SCORE:
                 print(f"  (below {MIN_SCORE:g}) {c['score']:>4} {' / '.join(c['lines'])}")
     # Only the ones the writer itself rates as wearable go live.
-    candidates = sorted((c for c in candidates if c["score"] >= MIN_SCORE), key=lambda c: -c["score"])[:8]
+    candidates = sorted((c for c in candidates if c["score"] >= MIN_SCORE), key=lambda c: -c["score"])[:12]
     for c in candidates:
         print(f"  {c['score']:>4} {' / '.join(c['lines']):<36} {c['ticker']:<7} {c['style']:<8} {c['source']:<10} {c['blurb']}")
     if dry:
@@ -408,8 +408,9 @@ def main():
 
     m = json.loads(http(f"{API}/api/admin/maintain", {"likes": likes}, {"x-admin-token": token}, timeout=600))
     print(f"maintain: {json.dumps(m)}")
-    # New memes become shop products (tees with Printful mockups); slow, so it goes last.
-    p = json.loads(http(f"{API}/api/admin/productize", {}, {"x-admin-token": token}, timeout=1500))
+    # New memes become shop products (tees, plus hoodies for 8+). Printful mockups are
+    # slow, so the app builds them in the background (log: docker logs cryptothreads-app).
+    p = json.loads(http(f"{API}/api/admin/productize?async=1&limit=20", {}, {"x-admin-token": token}, timeout=60))
     print(f"productize: {json.dumps(p)}")
 
 
