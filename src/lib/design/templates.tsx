@@ -1,7 +1,7 @@
 import React from "react";
 import type { StyleId } from "./styles";
 import { BoxLogo, Meme, PixelArt, PumpChart, Receipt, Stamp } from "./templates-street";
-import { Gothic, Headline, Nouns, Tarot, Terminal, Vapor, Warning } from "./templates-alt";
+import { Art, Gothic, Headline, Nouns, Tarot, Terminal, Vapor, Warning } from "./templates-alt";
 
 export interface TemplateProps {
   ticker: string; // e.g. "BTC"
@@ -20,6 +20,10 @@ export interface TemplateProps {
   art?: string;
   /** Caption for that artwork, e.g. "NOUN 812". */
   artLabel?: string;
+  /** Pixel size of `art`, and laser-eye positions as fractions of it. */
+  artW?: number;
+  artH?: number;
+  eyes?: [number, number][];
 }
 
 export type TemplateName = StyleId | "exact";
@@ -174,5 +178,16 @@ export const TEMPLATES: Record<TemplateName, (p: TemplateProps) => React.ReactEl
   terminal: Terminal,
   tarot: Tarot,
   nouns: Nouns,
+  "art-scream": Art,
+  "art-monalisa": Art,
+  "art-wave": Art,
+  "art-napoleon": Art,
+  "art-adam": Art,
+  "art-liberty": Art,
+  "art-socrates": Art,
+  "art-harvesters": Art,
+  "art-delaware": Art,
+  "art-pearl": Art,
+  "art-starry": Art,
   exact: Exact,
 };

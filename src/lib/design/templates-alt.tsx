@@ -275,3 +275,58 @@ export function Nouns(p: TemplateProps) {
     </div>
   );
 }
+
+/* ---------------------------------------------------------------- art */
+
+/** Laser eye: a hot core, a red glow, and a beam shooting out to the side. */
+function LaserEye({ x, y, scale, dir }: { x: number; y: number; scale: number; dir: number }) {
+  const core = Math.round(26 * scale);
+  const glow = Math.round(150 * scale);
+  const beamL = Math.round(1400 * scale);
+  const beamH = Math.round(38 * scale);
+  const rad = (dir * Math.PI) / 180;
+  return (
+    <div style={{ display: "flex", position: "absolute", left: 0, top: 0 }}>
+      {/* Satori rotates about the center, so place the beam's center half a beam-length out from the eye. */}
+      <div style={{ display: "flex", position: "absolute", left: x + (Math.cos(rad) * beamL) / 2 - beamL / 2, top: y + (Math.sin(rad) * beamL) / 2 - beamH / 2, width: beamL, height: beamH, backgroundImage: "linear-gradient(90deg, rgba(255,40,40,0.95), rgba(255,40,40,0))", transform: `rotate(${dir}deg)` }} />
+      <div style={{ display: "flex", position: "absolute", left: x - glow / 2, top: y - glow / 2, width: glow, height: glow, borderRadius: glow, backgroundImage: "radial-gradient(circle, rgba(255,60,60,0.95) 0%, rgba(255,0,0,0.55) 35%, rgba(255,0,0,0) 70%)" }} />
+      <div style={{ display: "flex", position: "absolute", left: x - core / 2, top: y - core / 2, width: core, height: core, borderRadius: core, backgroundColor: "#fff6e0" }} />
+    </div>
+  );
+}
+
+/**
+ * A public-domain painting with a crypto spin: laser eyes where there's a face,
+ * the slogan underneath, and a small credit line.
+ */
+export function Art(p: TemplateProps) {
+  const maxW = 3900;
+  const maxH = 3500;
+  const aw = p.artW ?? 1;
+  const ah = p.artH ?? 1;
+  const k = Math.min(maxW / aw, maxH / ah);
+  const w = Math.round(aw * k);
+  const h = Math.round(ah * k);
+  const size = fitLines(p.slogan, 4100, 0.47, 700);
+  const eyes = p.eyes ?? [];
+  // Beams fan out away from the face's center.
+  const cx = eyes.reduce((a, e) => a + e[0], 0) / Math.max(1, eyes.length);
+  return (
+    <div style={frame()}>
+      {p.art && (
+        <div style={{ display: "flex", position: "relative", width: w, height: h, overflow: "hidden" }}>
+          <img src={p.art} width={w} height={h} />
+          {eyes.map(([ex, ey], i) => (
+            <LaserEye key={i} x={ex * w} y={ey * h} scale={w / 3000} dir={eyes.length > 1 ? (ex < cx ? 195 : -15) : 190} />
+          ))}
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 140 }}>
+        <Lines lines={p.slogan} style={{ fontFamily: "Anton", fontSize: size, lineHeight: 1.02, color: "#ffffff" }} />
+      </div>
+      <div style={{ display: "flex", fontFamily: "IBM Plex Mono", fontSize: 105, color: "#9a9a9a", marginTop: 70 }}>
+        {`${p.artLabel ?? ""} · ${p.ticker.toUpperCase()} edition`}
+      </div>
+    </div>
+  );
+}

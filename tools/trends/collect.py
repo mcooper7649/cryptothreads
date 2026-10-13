@@ -46,7 +46,7 @@ BAIT = re.compile(
     r"\b1000x\b.*\?|\b100x\b.*\?|under \d+k? ?m?c\b|make me buy|ready for this bull",
     re.I,
 )
-STYLES = ["slogan", "box", "chart", "receipt", "stamp", "pixel", "gothic", "warning", "headline", "vapor", "terminal", "tarot", "nouns"]
+STYLES = ["slogan", "box", "chart", "receipt", "stamp", "pixel", "gothic", "warning", "headline", "vapor", "terminal", "tarot", "nouns", "art-scream", "art-monalisa", "art-wave", "art-napoleon", "art-adam", "art-liberty", "art-socrates", "art-harvesters", "art-delaware", "art-pearl", "art-starry"]
 MIN_SCORE = float(os.environ.get("TRENDS_MIN_SCORE", "6"))
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 
@@ -262,6 +262,11 @@ Rules:
   headline = newspaper front page ("LOCAL MAN / BUYS TOP / AGAIN"); vapor = vaporwave nostalgia ("WE'RE SO / BACK");
   terminal = green command line, nerdy/onchain jokes; tarot = a card name ("THE / JEET", "THE / EXIT LIQUIDITY");
   nouns = a real Noun (public-domain NFT pixel character) above the slogan: best for NFT-culture and short punchy lines;
+  art-* = a famous public-domain painting with the slogan as its caption, the classic meme format. Pick the painting that makes
+  the joke: art-scream (panic, checking your bags), art-monalisa (laser eyes, unbothered hodler), art-wave (the dip, a liquidation
+  wave), art-napoleon (laser eyes, whale/conqueror), art-adam (passing the bag), art-liberty (laser eyes, revolution, bulls leading),
+  art-socrates (drinking hemlock = buying the top), art-harvesters (airdrop farming), art-delaware (we ride at dawn),
+  art-pearl (laser eyes, looking back at the chart you sold), art-starry (3am chart watching). Use 2-4 of these per batch;
   chart = pump/dump jokes; receipt = losses; stamp = short club identity; pixel = gaming; slogan/box = anything.
   Wordy slogans (3 lines or 20+ characters) fit slogan, box, receipt, warning or headline best.
 - Lean degen: the trenches, rugs, jeets, bundles, exit liquidity, perps and liquidations, airdrop farming, "it's so over / we're so back",

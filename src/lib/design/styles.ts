@@ -18,9 +18,27 @@ export const STYLES = [
   { id: "terminal", label: "Terminal", blurb: "Green CRT command line", slogan: true },
   { id: "tarot", label: "Tarot", blurb: "Gold tarot card with your coin as the sigil", slogan: true },
   { id: "nouns", label: "Nouns", blurb: "A real Noun (public-domain NFT art) with your slogan", slogan: true },
+  // Public-domain paintings with a crypto spin (src/lib/design/artworks.ts).
+  { id: "art-scream", label: "The Scream", blurb: "Munch's scream: panic, checking your bags", slogan: true, group: "art" },
+  { id: "art-monalisa", label: "Mona Lisa", blurb: "Laser-eyed Mona Lisa, unbothered hodler", slogan: true, group: "art" },
+  { id: "art-wave", label: "Great Wave", blurb: "Hokusai's wave: the dip arrives", slogan: true, group: "art" },
+  { id: "art-napoleon", label: "Napoleon", blurb: "Laser-eyed emperor, whale energy", slogan: true, group: "art" },
+  { id: "art-adam", label: "Creation", blurb: "Michelangelo's hands: passing the bag", slogan: true, group: "art" },
+  { id: "art-liberty", label: "Liberty", blurb: "Laser-eyed Liberty leading the bulls", slogan: true, group: "art" },
+  { id: "art-socrates", label: "Socrates", blurb: "Drinking the hemlock: buying the top", slogan: true, group: "art" },
+  { id: "art-harvesters", label: "Harvesters", blurb: "Bruegel's farmers: airdrop season", slogan: true, group: "art" },
+  { id: "art-delaware", label: "Crossing", blurb: "Washington crossing: we ride at dawn", slogan: true, group: "art" },
+  { id: "art-pearl", label: "Pearl Earring", blurb: "Laser-eyed Vermeer looking back at the chart", slogan: true, group: "art" },
+  { id: "art-starry", label: "Starry Night", blurb: "Van Gogh at 3am, watching candles", slogan: true, group: "art" },
 ] as const;
 
 export type StyleId = (typeof STYLES)[number]["id"];
+/** Public-domain painting styles ("art-*") are listed apart from the graphic styles. */
+export const isArtStyle = (id: string) => id.startsWith("art-");
+export const STYLE_GROUPS = [
+  { label: "Graphic", styles: STYLES.filter((s) => !isArtStyle(s.id)) },
+  { label: "Old masters, new bags", styles: STYLES.filter((s) => isArtStyle(s.id)) },
+];
 export const STYLE_IDS = STYLES.map((s) => s.id) as [StyleId, ...StyleId[]];
 export const DEFAULT_STYLE: StyleId = "ticker";
 

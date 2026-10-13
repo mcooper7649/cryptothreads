@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getActiveProducts, getDropNumber } from "@/lib/queries";
 import { ProductCard } from "@/components/ProductCard";
-import { STYLES } from "@/lib/design/styles";
+import { STYLES, STYLE_GROUPS } from "@/lib/design/styles";
 import { BLANKS, CATEGORIES, blanksIn } from "@/lib/printful/blanks";
 import { formatPrice } from "@/lib/format";
 import { TIMELINE, TIMELINE_AS_OF } from "@/lib/timeline";
@@ -217,10 +217,15 @@ export default async function Home() {
       <section className="mx-auto max-w-7xl px-4 py-12">
         <div className="mb-8 border-b-2 border-[var(--line)] pb-4">
           <h2 className="display text-5xl sm:text-6xl">Pick your poison</h2>
-          <p className="mt-2 text-[var(--dim)]">Seven print styles. Any coin goes in any of them.</p>
+          <p className="mt-2 text-[var(--dim)]">
+            {STYLES.length} print styles, from warning labels to laser-eyed Old Masters. Any coin goes in any of them.
+          </p>
         </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
-          {STYLES.map((s) => (
+        {STYLE_GROUPS.map((g) => (
+        <div key={g.label} className="mb-10">
+        <h3 className="display mb-4 text-3xl text-[var(--acid)]">{g.label}</h3>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
+          {g.styles.map((s) => (
             <Link key={s.id} href={`/generate?style=${s.id}`} className="group block">
               <div className="garment aspect-[5/6] border-2 border-[var(--line)] p-2 transition-colors group-hover:border-[var(--acid)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -231,6 +236,8 @@ export default async function Home() {
             </Link>
           ))}
         </div>
+        </div>
+        ))}
       </section>
 
       {/* Disclaimer band, as a joke */}

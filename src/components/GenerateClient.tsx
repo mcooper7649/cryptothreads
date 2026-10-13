@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCart } from "./CartProvider";
 import { formatPrice } from "@/lib/format";
 import { BLANKS, CATEGORIES, blanksIn, typicalSize, type BlankType } from "@/lib/printful/blanks";
-import { DEFAULT_STYLE, STYLES, slogansFor, styleUsesSlogan, type Slogan, type StyleId } from "@/lib/design/styles";
+import { DEFAULT_STYLE, STYLES, STYLE_GROUPS, slogansFor, styleUsesSlogan, type Slogan, type StyleId } from "@/lib/design/styles";
 
 const EXAMPLES = ["BTC", "DOGE", "ETH", "SOL", "PEPE", "uniswap.org"];
 
@@ -129,8 +129,12 @@ export function GenerateClient({
         </Step>
 
         <Step n={2} title="Pick a style">
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {STYLES.map((s) => (
+          <div className="space-y-4">
+          {STYLE_GROUPS.map((g) => (
+            <div key={g.label}>
+            <p className="label">{g.label}</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {g.styles.map((s) => (
               <button
                 key={s.id}
                 type="button"
@@ -147,6 +151,9 @@ export function GenerateClient({
                 <span className={`display mt-1.5 block text-lg ${style === s.id ? "text-[var(--acid)]" : ""}`}>{s.label}</span>
               </button>
             ))}
+          </div>
+            </div>
+          ))}
           </div>
         </Step>
 

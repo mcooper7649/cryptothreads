@@ -2,6 +2,9 @@ import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
 import sharp from "sharp";
 import { nounArt } from "./nouns";
+import { artworkFor } from "./artworks";
+import { readFileSync } from "fs";
+import path from "path";
 import { getFonts } from "./fonts";
 import { rasterizeLogo } from "./logo-raster";
 import { extractPalette } from "./palette";
@@ -169,6 +172,20 @@ export async function renderPrintFile(input: RenderInput): Promise<RenderOutput>
     fg,
     slogan: input.sloganLines ?? getSlogan(input.slogan).lines,
   };
+  const artwork = artworkFor(templateName(input));
+  if (artwork) {
+    const file = readFileSync(path.join(process.cwd(), "src", "assets", "art", artwork.file));
+    const meta = await sharp(file).metadata();
+    const [fw, fh] = [meta.width ?? 1, meta.height ?? 1];
+    const [x0, y0, x1, y1] = artwork.crop;
+    const box = { left: Math.round(x0 * fw), top: Math.round(y0 * fh), width: Math.round((x1 - x0) * fw), height: Math.round((y1 - y0) * fh) };
+    const jpg = await sharp(file).extract(box).jpeg({ quality: 90 }).toBuffer();
+    props.art = `data:image/jpeg;base64,${jpg.toString("base64")}`;
+    props.artW = box.width;
+    props.artH = box.height;
+    props.artLabel = artwork.credit;
+    props.eyes = (artwork.eyes ?? []).map(([ex, ey]) => [(ex - x0) / (x1 - x0), (ey - y0) / (y1 - y0)]);
+  }
   if (templateName(input) === "nouns") {
     // Same coin + slogan always gets the same Noun.
     const noun = await nounArt(`${input.ticker}:${props.slogan.join(" ")}`);

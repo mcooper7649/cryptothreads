@@ -37,6 +37,17 @@ const showcase: [StyleId, string, string][] = [
   ["terminal", "BTC", "few-understand"],
   ["tarot", "DOGE", "diamond-hands"],
   ["nouns", "ETH", "gm"],
+  ["art-scream", "BTC", "this-is-fine"],
+  ["art-monalisa", "BTC", "hodl"],
+  ["art-wave", "ETH", "buy-the-dip"],
+  ["art-napoleon", "BTC", "stack-sats"],
+  ["art-adam", "ETH", "gm"],
+  ["art-liberty", "SOL", "lfg"],
+  ["art-socrates", "BTC", "exit-liquidity"],
+  ["art-harvesters", "SOL", "still-early"],
+  ["art-delaware", "BTC", "wagmi"],
+  ["art-pearl", "ETH", "down-bad"],
+  ["art-starry", "SOL", "wen-moon"],
 ];
 const stickers: [StyleId, string, string][] = [
   ["slogan", "BTC", "one-btc"],
