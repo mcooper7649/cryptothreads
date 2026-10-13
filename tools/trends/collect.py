@@ -30,7 +30,21 @@ DEX_MIN_AGE_H = 24
 QUOTES = {"WETH", "ETH", "SOL", "WSOL", "USDC", "USDT", "WBTC", "CBBTC", "USD1", "DAI", "BNB", "WBNB"}
 X_STATE = os.environ.get("X_STATE", "")  # saved X session (storage_state.json); X is skipped without it
 SUBS = ["CryptoCurrency", "memecoins", "Bitcoin", "solana", "SatoshiStreetBets"]
-X_SEARCHES = ["crypto meme", "memecoin", "crypto twitter"]
+# Only posts people actually engaged with, from the last two days: keyword search
+# alone returns reply-farming bait ("shill me a memecoin under 10M").
+X_SEARCHES = [
+    '(crypto OR memecoin OR onchain OR altcoins OR "crypto twitter") min_faves:1500 -filter:replies lang:en since:{since}',
+    '(airdrop OR perps OR liquidated OR jeets OR "dev sold" OR rugged OR bonded OR trenches) min_faves:400 -filter:replies lang:en since:{since}',
+    '(bitcoin OR ethereum OR solana) min_faves:3000 -filter:replies lang:en since:{since}',
+]
+ACCOUNTS_PER_RUN = 10
+# Engagement bait, giveaways and shill requests: never culture, always noise.
+BAIT = re.compile(
+    r"shill me|which (#?meme ?coin|coin|token|#?memecoin)|what (#?meme ?coin|coin|token|#?memecoin)|drop your|"
+    r"tell me about your|i will (read|answer|follow)|giveaway|like (and|&) (rt|retweet)|follow me|"
+    r"\b1000x\b.*\?|\b100x\b.*\?|under \d+k? ?m?c\b|make me buy|ready for this bull",
+    re.I,
+)
 STYLES = ["slogan", "box", "chart", "receipt", "stamp", "pixel"]
 MIN_SCORE = float(os.environ.get("TRENDS_MIN_SCORE", "6"))
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
@@ -159,12 +173,27 @@ def x_posts(merch=()):
                 txt = t.inner_text().replace("\n", " | ")
                 if "Business and finance" in txt or "crypto" in txt.lower():
                     out.append(("x", "Trending topic: " + txt.split("|")[-1].strip()))
+            since = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 2 * 86400))
             for q in X_SEARCHES:
                 time.sleep(5)
-                pg.goto(f"https://x.com/search?q={urllib.request.quote(q)}&src=typed_query&f=top", wait_until="domcontentloaded")
+                pg.goto(f"https://x.com/search?q={urllib.request.quote(q.format(since=since))}&src=typed_query&f=top", wait_until="domcontentloaded")
                 time.sleep(7)
                 for t in pg.locator("article [data-testid=tweetText]").all()[:15]:
                     out.append(("x", t.inner_text().replace("\n", " ")[:280]))
+            for handle in accounts():
+                time.sleep(5)
+                pg.goto(f"https://x.com/{handle}", wait_until="domcontentloaded")
+                time.sleep(6)
+                n = 0
+                for a in pg.locator("article").all()[:8]:
+                    if n >= 5:
+                        break
+                    if a.locator("[data-testid=socialContext]").count():  # pinned or reposted
+                        continue
+                    txt = a.locator("[data-testid=tweetText]")
+                    if txt.count():
+                        out.append(("x", f"@{handle}: " + txt.first.inner_text().replace("\n", " ")[:280]))
+                        n += 1
         except Exception as e:
             print(f"x: {e}", file=sys.stderr)
         for m in list(merch)[:5]:
@@ -182,6 +211,16 @@ def x_posts(merch=()):
     return out, likes
 
 
+def accounts():
+    """This run's slice of tools/trends/accounts.txt, rotating by hour so every account comes up each day."""
+    path = Path(__file__).with_name("accounts.txt")
+    handles = [l.strip().lstrip("@") for l in path.read_text().splitlines() if l.strip() and not l.startswith("#")] if path.exists() else []
+    if not handles:
+        return []
+    start = (time.gmtime().tm_hour * ACCOUNTS_PER_RUN) % len(handles)
+    return (handles * 2)[start:start + min(ACCOUNTS_PER_RUN, len(handles))]
+
+
 PROMPT = """You write slogans for CryptoThreads, a crypto streetwear shop. Each slogan is printed big on a black t-shirt.
 
 House voice (existing slogans, do NOT repeat these or the "already live" ones):
@@ -196,23 +235,32 @@ Coins trending on CoinGecko today: {coins}
 
 New coins moving on the DEXes right now (real liquidity, at least a day old): {dex}
 
-Write {n} NEW slogans that riff on today's themes, moods and jokes.
+First, read the posts like someone who lives on crypto Twitter. Ignore engagement bait
+("shill me", "which coin will 100x", giveaways) and generic boomer crypto jokes (HODL, moon,
+lambo, "number go up"). Write down the 8-12 in-jokes, phrases, narratives and moods that are
+actually going around TODAY: quote the exact words people are using where you can.
+
+Then write {n} NEW slogans built only from that list. They should feel like they came from this
+week's timeline, so someone on crypto Twitter gets the reference instantly and someone outside
+doesn't quite: the current slang, the thing everyone got rekt on, the narrative everyone is
+tired of, the phrase that keeps getting quote-tweeted.
 
 They are JOKES and ATTITUDES, not news headlines. Read top to bottom, the lines form one phrase.
-Good (the right shape; don't reuse them): "BOUGHT THE / TOP / AGAIN", "MY BAGS / ARE / HEAVY", "GM / (COPE)".
-Bad (headlines, word lists, jargon): "SEIZED / RESERVE / STRONG", "MINING / FAILURES / SUCCESS", "XRP / LEADER / COMMUNITY", "ZKCBDC / PATENTED".
+Shape (don't reuse): "BOUGHT THE / TOP / AGAIN", "GM / (COPE)".
+Bad: headlines ("SEIZED / RESERVE / STRONG"), word lists ("XRP / LEADER / COMMUNITY"), generic
+crypto jokes that could be from 2017 ("TO THE / MOON"), and anything not traceable to today's posts.
 Rules:
 - 1 to 3 lines, each line at most 12 characters, ALL CAPS, only letters, digits, spaces and $'!?,.&()#%+-/
-- A crypto person would laugh and wear it. Self-deprecating degen humor works best.
-- NEVER name a real person, company, exchange, brand, team, cartoon or meme character, or political topic.
-- No profanity, slurs, violence, sex, drugs, or promises of gains (no 100x, no giveaways, no airdrops).
-- Don't copy a post word for word. Distill the joke into something new; every slogan must be about something in today's posts.
-- ticker: a coin it fits, from the CoinGecko or DEX lists or BTC, ETH, SOL, DOGE, XRP. No $ sign. Put at least a third of the slogans on CoinGecko/DEX coins so the shop has fresh ones; skip any coin whose name is a real person, brand or slur.
-- style: one of {styles}. chart suits pump/dump jokes, receipt suits losses, stamp suits "club" identity, pixel suits gaming jokes, box and slogan suit anything.
+- A crypto person would laugh and wear it.
+- NEVER name a real person, company, exchange, protocol, app, brand, team, cartoon or meme character, or political topic (trademarks). Point at them with the slang instead.
+- No profanity, slurs, violence, sex or drugs. Jokes about airdrops, 100x and getting rekt are fine; never promise gains.
+- Don't copy a post word for word; distill it.
+- ticker: the coin the joke is about. Use a CoinGecko/DEX coin only if the joke is about that coin; otherwise BTC, ETH, SOL, DOGE or XRP. No $ sign.
+- style: one of {styles}. Wordy slogans (3 lines or 20+ characters) must use slogan, box or receipt; chart suits pump/dump jokes, stamp suits short "club" identity, pixel suits gaming jokes.
 - blurb: under 70 characters, plain words, what it riffs on (for example "Everyone on X says crypto is back. Again."). No names, no @handles.
-- strength: 1-10, how funny and wearable it is.
+- strength: 1-10, how funny, current and wearable it is. Below 6 if the reference isn't from today's posts.
 
-Reply with JSON only: {{"slogans": [{{"lines": ["..."], "ticker": "...", "style": "...", "blurb": "...", "strength": 7, "source": "x" or "reddit" or "polymarket"}}]}}"""
+Reply with JSON only: {{"culture": ["..."], "slogans": [{{"lines": ["..."], "ticker": "...", "style": "...", "blurb": "...", "strength": 7, "source": "x" or "reddit" or "polymarket"}}]}}"""
 
 
 def write_slogans(posts, coins, dex, existing, live, n=20):
@@ -227,7 +275,10 @@ def write_slogans(posts, coins, dex, existing, live, n=20):
     )
     raw = claude(prompt) if env("ANTHROPIC_API_KEY") else ollama(prompt)
     raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
-    return json.loads(raw).get("slogans", [])
+    data = json.loads(raw)
+    for c in data.get("culture", []):
+        print(f"  culture: {c}")
+    return data.get("slogans", [])
 
 
 def claude(prompt):
@@ -311,7 +362,7 @@ def main():
     dex = dex_coins()
     # Drop link spam and near-empty posts, keep the prompt a sane size.
     posts = [(s, re.sub(r"https?://\S+", "", t).strip()) for s, t in posts]
-    posts = [(s, t) for s, t in posts if len(t) > 12][:130]
+    posts = [(s, t) for s, t in posts if len(t) > 12 and not BAIT.search(t)][:150]
     print(f"{len(posts)} posts ({sum(s == 'x' for s, _ in posts)} from X), coins: {', '.join(coins)}, dex: {', '.join(c['symbol'] for c in dex)}")
     if len(posts) < 10:
         sys.exit("too little input today, skipping")

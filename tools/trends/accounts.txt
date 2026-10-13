@@ -1,0 +1,23 @@
+# Crypto Twitter accounts whose timelines the trend collector reads (10 per run,
+# rotating). Pick people who set the culture: traders, memers, onchain sleuths,
+# news. Handles that no longer exist are skipped. One handle per line, no @.
+cobie
+blknoiz06
+MustStopMurad
+inversebrah
+notthreadguy
+gainzy222
+CryptoKaleo
+DegenSpartan
+HsakaTrades
+Pentosh1
+CL207
+frankdegods
+zachxbt
+lookonchain
+WatcherGuru
+tier10k
+beaniemaxi
+AltcoinGordon
+CryptoCobain
+punk6529

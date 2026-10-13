@@ -32,8 +32,8 @@ const BLOCKED = [
   "kill", "murder", "shoot", "bomb", "suicide", "nazi", "hitler", "isis",
   "porn", "sex", "nude", "cock", "dick", "pussy", "fuck", "shit", "bitch", "cunt", "whore",
   "cocaine", "heroin", "fent", "retard", "fag", "nigg", "tranny", "kike", "chink", "gook",
-  // claims we can't make on a shirt
-  "guarantee", "giveaway", "airdrop", "freemoney", "100x", "1000x",
+  // claims we can't make on a shirt (airdrop/100x jokes are fine: they are the culture, not promises)
+  "guarantee", "giveaway", "freemoney",
 ];
 // Whole-word matches (too short for substring matching).
 const BLOCKED_WORDS = [
