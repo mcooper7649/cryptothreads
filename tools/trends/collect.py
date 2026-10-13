@@ -260,7 +260,15 @@ Rules:
 - blurb: under 70 characters, plain words, what it riffs on (for example "Everyone on X says crypto is back. Again."). No names, no @handles.
 - strength: 1-10, how funny, current and wearable it is. Below 6 if the reference isn't from today's posts.
 
-Reply with JSON only: {{"culture": ["..."], "slogans": [{{"lines": ["..."], "ticker": "...", "style": "...", "blurb": "...", "strength": 7, "source": "x" or "reddit" or "polymarket"}}]}}"""
+Also name today's drop: "drop": {{"title": "...", "intro": "..."}}. The title is 3-7 words in the
+house voice, like a streetwear drop name about today's timeline (no names, no tickers with $).
+The intro is 2-3 short sentences on what crypto Twitter is going through today and why these
+designs exist, written for the shop's drops page. Same rules: no real people, brands or politics.
+
+Reply with JSON only: {{"culture": ["..."], "drop": {{"title": "...", "intro": "..."}}, "slogans": [{{"lines": ["..."], "ticker": "...", "style": "...", "blurb": "...", "strength": 7, "source": "x" or "reddit" or "polymarket"}}]}}"""
+
+
+DROP = None  # the writer's title + intro for this run's drop
 
 
 def write_slogans(posts, coins, dex, existing, live, n=20):
@@ -278,6 +286,10 @@ def write_slogans(posts, coins, dex, existing, live, n=20):
     data = json.loads(raw)
     for c in data.get("culture", []):
         print(f"  culture: {c}")
+    global DROP
+    DROP = data.get("drop") if isinstance(data.get("drop"), dict) else None
+    if DROP:
+        print(f"  drop: {DROP.get('title')}")
     return data.get("slogans", [])
 
 
@@ -410,7 +422,9 @@ def main():
     print(f"maintain: {json.dumps(m)}")
     # New memes become shop products (tee; 8+ adds hoodie + women's tee; 9+ tanks, hat, mug). Mockups are
     # slow, so the app builds them in the background (log: docker logs cryptothreads-app).
-    p = json.loads(http(f"{API}/api/admin/productize?async=1&limit=30", {}, {"x-admin-token": token}, timeout=60))
+    created = res["created"] if candidates else []
+    body = {"sloganIds": created, **({"drop": {"title": str(DROP.get("title", ""))[:90], "intro": str(DROP.get("intro", ""))[:700]}} if DROP and created else {})}
+    p = json.loads(http(f"{API}/api/admin/productize?async=1&limit=30", body, {"x-admin-token": token}, timeout=60))
     print(f"productize: {json.dumps(p)}")
 
 

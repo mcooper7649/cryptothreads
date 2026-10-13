@@ -130,6 +130,9 @@ model ContentPost {
   bodyMdx     String
   coinRefs    String[] // symbols featured
   productIds  String[]
+  /// Trending slogans in this drop (one section each), in display order.
+  sloganIds   String[] @default([])
+  coverUrl    String?
   publishedAt DateTime @default(now())
 
   @@index([publishedAt])
