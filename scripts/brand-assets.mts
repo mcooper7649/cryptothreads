@@ -30,6 +30,12 @@ const showcase: [StyleId, string, string][] = [
   ["receipt", "LINK", "down-bad"],
   ["stamp", "BTC", "diamond-hands"],
   ["pixel", "AVAX", "wen-moon"],
+  ["gothic", "SOL", "down-bad"],
+  ["warning", "BTC", "exit-liquidity"],
+  ["headline", "ETH", "crypto-is-back"],
+  ["vapor", "SOL", "sol-summer"],
+  ["terminal", "BTC", "few-understand"],
+  ["tarot", "DOGE", "diamond-hands"],
 ];
 const stickers: [StyleId, string, string][] = [
   ["slogan", "BTC", "one-btc"],

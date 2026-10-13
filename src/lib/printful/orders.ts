@@ -1,4 +1,5 @@
 import { pf } from "./client";
+import type { ExtraPlacement } from "./mockups";
 
 export interface Recipient {
   name: string;
@@ -19,6 +20,7 @@ export interface OrderItemInput {
   technique?: string;
   fileId?: number;
   fileUrl?: string;
+  extra?: ExtraPlacement[];
 }
 
 interface OrderResponse {
@@ -40,6 +42,11 @@ function itemPayload(it: OrderItemInput) {
         ...(it.technique ? { technique: it.technique } : {}),
         layers: [layer],
       },
+      ...(it.extra ?? []).map((x) => ({
+        placement: x.placement,
+        ...(x.technique ? { technique: x.technique } : {}),
+        layers: [{ type: "file", id: x.fileId }],
+      })),
     ],
   };
 }

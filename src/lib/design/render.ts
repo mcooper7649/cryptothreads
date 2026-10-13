@@ -29,7 +29,7 @@ export interface RenderInput {
    * "sticker" puts the design on a black rounded square sized for kiss-cut stickers;
    * "mug" lays it twice on a black 9"x3.5" wrap; "hat" fits it into a 5"x2" front panel.
    */
-  format?: "apparel" | "sticker" | "mug" | "hat";
+  format?: "apparel" | "sticker" | "mug" | "hat" | "towel" | "backpack";
   accent?: string; // override palette-derived accent
   /** Skip the full-resolution print file and rasterize only the web preview (~25x cheaper). */
   previewOnly?: boolean;
@@ -78,6 +78,24 @@ const MUG_H = 1050;
 // Dad hat DTF front: 5" x 2" at 300 DPI, transparent (DTF prints white).
 const HAT_W = 1500;
 const HAT_H = 600;
+
+// All-over prints at 150 DPI: beach towel 32"x62" (bleed included), backpack front 14.5"x20.5".
+const TOWEL_W = 4800;
+const TOWEL_H = 9300;
+const PACK_W = 2175;
+const PACK_H = 3075;
+
+/** Solid black panel with the art fitted into a share of it, centered (or nudged up). */
+async function toPanel(png: Buffer, w: number, h: number, share: number, rise = 0): Promise<Buffer> {
+  const art = await fit(png, Math.round(w * share), Math.round(h * share));
+  const meta = await sharp(art).metadata();
+  const top = Math.max(0, Math.round((h - (meta.height ?? 0)) / 2 - h * rise));
+  const left = Math.round((w - (meta.width ?? 0)) / 2);
+  return sharp({ create: { width: w, height: h, channels: 4, background: STICKER_BG } })
+    .composite([{ input: art, top, left }])
+    .png()
+    .toBuffer();
+}
 
 /** Trimmed art fitted into a box. */
 async function fit(png: Buffer, w: number, h: number): Promise<Buffer> {
@@ -156,6 +174,16 @@ export async function renderPrintFile(input: RenderInput): Promise<RenderOutput>
         .render()
         .asPng()
     );
+
+  if (input.format === "towel" || input.format === "backpack") {
+    const towel = input.format === "towel";
+    const [w, h] = towel ? [TOWEL_W, TOWEL_H] : [PACK_W, PACK_H];
+    const lay = (png: Buffer, pw: number, ph: number) => toPanel(png, pw, ph, towel ? 0.8 : 0.78, towel ? 0.08 : 0.04);
+    const previewW = Math.round(PREVIEW_W * 0.6);
+    const previewPng = await lay(raster(PREVIEW_W * 2), previewW, Math.round((previewW * h) / w));
+    if (input.previewOnly) return { printPng: Buffer.alloc(0), previewPng, width: w, height: h, accent };
+    return { printPng: await lay(raster(PRINT_W), w, h), previewPng, width: w, height: h, accent };
+  }
 
   if (input.format === "mug" || input.format === "hat") {
     const mug = input.format === "mug";

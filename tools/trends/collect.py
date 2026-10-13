@@ -36,6 +36,7 @@ X_SEARCHES = [
     '(crypto OR memecoin OR onchain OR altcoins OR "crypto twitter") min_faves:1500 -filter:replies lang:en since:{since}',
     '(airdrop OR perps OR liquidated OR jeets OR "dev sold" OR rugged OR bonded OR trenches) min_faves:400 -filter:replies lang:en since:{since}',
     '(bitcoin OR ethereum OR solana) min_faves:3000 -filter:replies lang:en since:{since}',
+    '(nft OR nfts OR jpegs OR "floor price" OR mint OR pfp OR "paper hands" OR rugged) min_faves:600 -filter:replies lang:en since:{since}',
 ]
 ACCOUNTS_PER_RUN = 10
 # Engagement bait, giveaways and shill requests: never culture, always noise.
@@ -45,7 +46,7 @@ BAIT = re.compile(
     r"\b1000x\b.*\?|\b100x\b.*\?|under \d+k? ?m?c\b|make me buy|ready for this bull",
     re.I,
 )
-STYLES = ["slogan", "box", "chart", "receipt", "stamp", "pixel"]
+STYLES = ["slogan", "box", "chart", "receipt", "stamp", "pixel", "gothic", "warning", "headline", "vapor", "terminal", "tarot"]
 MIN_SCORE = float(os.environ.get("TRENDS_MIN_SCORE", "6"))
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 
@@ -256,7 +257,14 @@ Rules:
 - No profanity, slurs, violence, sex or drugs. Jokes about airdrops, 100x and getting rekt are fine; never promise gains.
 - Don't copy a post word for word; distill it.
 - ticker: the coin the joke is about. Use a CoinGecko/DEX coin only if the joke is about that coin; otherwise BTC, ETH, SOL, DOGE or XRP. No $ sign.
-- style: one of {styles}. Wordy slogans (3 lines or 20+ characters) must use slogan, box or receipt; chart suits pump/dump jokes, stamp suits short "club" identity, pixel suits gaming jokes.
+- style: one of {styles}. Mix them up: use at least 6 different styles across the batch and lean on the newer looks.
+  gothic = blackletter streetwear (short, ominous: "DEV / SOLD"); warning = hazard label ("MAY CAUSE / SUDDEN / LIQUIDATION");
+  headline = newspaper front page ("LOCAL MAN / BUYS TOP / AGAIN"); vapor = vaporwave nostalgia ("WE'RE SO / BACK");
+  terminal = green command line, nerdy/onchain jokes; tarot = a card name ("THE / JEET", "THE / EXIT LIQUIDITY");
+  chart = pump/dump jokes; receipt = losses; stamp = short club identity; pixel = gaming; slogan/box = anything.
+  Wordy slogans (3 lines or 20+ characters) fit slogan, box, receipt, warning or headline best.
+- Lean degen: the trenches, rugs, jeets, bundles, exit liquidity, perps and liquidations, airdrop farming, "it's so over / we're so back",
+  and NFT culture (floors, mints, wen reveal, jpegs, paper hands). Never name an NFT collection or its characters.
 - blurb: under 70 characters, plain words, what it riffs on (for example "Everyone on X says crypto is back. Again."). No names, no @handles.
 - strength: 1-10, how funny, current and wearable it is. Below 6 if the reference isn't from today's posts.
 

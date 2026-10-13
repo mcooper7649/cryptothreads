@@ -21,12 +21,16 @@ const KIND: Record<string, (label: string) => string> = {
   sticker: () => "vinyl sticker",
   mug: () => "black-wrap ceramic mug",
   hat: () => "black dad hat",
+  towel: () => "black beach towel",
+  backpack: () => "black all-over-print backpack",
 };
 const DETAILS: Record<string, string> = {
   apparel: "Printed on a black garment, front print, direct-to-garment.",
   sticker: "Kiss-cut vinyl sticker with a black backing. Waterproof and laptop-ready.",
   mug: "Glossy ceramic mug with a black wrap and the design on both sides. Dishwasher and microwave safe.",
   hat: "Black cotton dad hat, adjustable strap, full-color print on the front.",
+  towel: "30\"×60\" beach towel, soft polyester front and cotton back, printed black with the design big.",
+  backpack: "Water-resistant all-over-print backpack, padded laptop pocket, printed black with the design on the front.",
 };
 
 interface Variant {
@@ -84,7 +88,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
               image: images.map((u) => onSite(u)),
               description: `${product.title}: ${KIND[blank?.format ?? "apparel"](blank?.label ?? "shirt")}, printed on demand.`,
               brand: { "@type": "Brand", name: SITE_NAME },
-              category: { sticker: "Stickers", mug: "Mugs", hat: "Hats", apparel: "Apparel" }[blank?.format ?? "apparel"],
+              category: { sticker: "Stickers", mug: "Mugs", hat: "Hats", towel: "Towels", backpack: "Bags", apparel: "Apparel" }[blank?.format ?? "apparel"],
               offers: {
                 "@type": "Offer",
                 url: abs(`/product/${product.slug}`),

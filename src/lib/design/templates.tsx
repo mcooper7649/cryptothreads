@@ -1,6 +1,7 @@
 import React from "react";
 import type { StyleId } from "./styles";
 import { BoxLogo, Meme, PixelArt, PumpChart, Receipt, Stamp } from "./templates-street";
+import { Gothic, Headline, Tarot, Terminal, Vapor, Warning } from "./templates-alt";
 
 export interface TemplateProps {
   ticker: string; // e.g. "BTC"
@@ -162,5 +163,11 @@ export const TEMPLATES: Record<TemplateName, (p: TemplateProps) => React.ReactEl
   receipt: Receipt,
   stamp: Stamp,
   pixel: PixelArt,
+  gothic: Gothic,
+  warning: Warning,
+  headline: Headline,
+  vapor: Vapor,
+  terminal: Terminal,
+  tarot: Tarot,
   exact: Exact,
 };

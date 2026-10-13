@@ -10,6 +10,14 @@ export interface MockupRequest {
   fileUrl?: string;
   mockupStyleIds?: number[];
   format?: "png" | "jpg";
+  /** More print areas on the same product (e.g. solid panels on all-over prints). */
+  extra?: ExtraPlacement[];
+}
+
+export interface ExtraPlacement {
+  placement: string;
+  technique?: string;
+  fileId: number;
 }
 
 interface MockupTaskCreated {
@@ -47,6 +55,11 @@ export async function createMockupTask(
             ...(req.technique ? { technique: req.technique } : {}),
             layers: [layer(req)],
           },
+          ...(req.extra ?? []).map((x) => ({
+            placement: x.placement,
+            ...(x.technique ? { technique: x.technique } : {}),
+            layers: [{ type: "file", id: x.fileId }],
+          })),
         ],
       },
     ],

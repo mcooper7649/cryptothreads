@@ -11,6 +11,12 @@ export const STYLES = [
   { id: "receipt", label: "Receipt", blurb: "A trade receipt for your bags", slogan: true },
   { id: "stamp", label: "Club stamp", blurb: "A members-only seal with the slogan around the rim", slogan: true },
   { id: "pixel", label: "8-bit", blurb: "Pixel rocket and arcade type", slogan: true },
+  { id: "gothic", label: "Gothic", blurb: "Blackletter type, streetwear classic", slogan: true },
+  { id: "warning", label: "Warning label", blurb: "Hazard-yellow label for a volatile portfolio", slogan: true },
+  { id: "headline", label: "Headline", blurb: "Front page of The Degen Times", slogan: true },
+  { id: "vapor", label: "Vaporwave", blurb: "Striped sunset, neon grid, 1999 energy", slogan: true },
+  { id: "terminal", label: "Terminal", blurb: "Green CRT command line", slogan: true },
+  { id: "tarot", label: "Tarot", blurb: "Gold tarot card with your coin as the sigil", slogan: true },
 ] as const;
 
 export type StyleId = (typeof STYLES)[number]["id"];

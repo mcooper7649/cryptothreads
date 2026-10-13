@@ -7,7 +7,7 @@
 export const BLANK_TYPES = [
   "tee", "boxy", "longsleeve", "tank", "crewneck", "hoodie",
   "womens_tee", "womens_tank",
-  "hat", "mug", "sticker",
+  "hat", "mug", "towel", "backpack", "sticker",
 ] as const;
 export type BlankType = (typeof BLANK_TYPES)[number];
 
@@ -15,7 +15,7 @@ export type BlankType = (typeof BLANK_TYPES)[number];
 export const CATEGORIES = [
   { id: "mens", label: "Men's & unisex" },
   { id: "womens", label: "Women's" },
-  { id: "accessories", label: "Hats, mugs & stickers" },
+  { id: "accessories", label: "Accessories" },
 ] as const;
 export type Category = (typeof CATEGORIES)[number]["id"];
 
@@ -36,12 +36,17 @@ export interface BlankConfig {
    * backing (white vinyl); mug = black wrap with the art on both sides (white
    * ceramic, since sublimation can't print white); hat = a wide front panel.
    */
-  format: "apparel" | "sticker" | "mug" | "hat";
+  format: "apparel" | "sticker" | "mug" | "hat" | "towel" | "backpack";
   category: Category;
   /** Sizes we sell, in display order (Printful's labels). */
   sizes: string[];
   /** Garment color to sell; default is black, then the darkest available. */
   color?: string;
+  /**
+   * Extra print areas filled solid black (all-over-print products have no
+   * unprinted fabric), in inches at 150 DPI.
+   */
+  fills?: { placement: string; w: number; h: number }[];
   /** Printful cost of a typical variant when we checked, for margin sanity checks. */
   costCents: number;
 }
@@ -102,6 +107,21 @@ export const BLANKS: Record<BlankType, BlankConfig> = {
     catalogProductId: 19, placement: "default", technique: "sublimation", // White Glossy Mug, printed black wrap
     priceCents: 1999, format: "mug", costCents: 695, category: "accessories", sizes: ["11 oz", "15 oz"], color: "White",
   },
+  towel: {
+    type: "towel", label: "Beach Towel", short: "Towel",
+    catalogProductId: 259, placement: "default", technique: "sublimation", // 30"x60", printed black with the art
+    priceCents: 4499, format: "towel", costCents: 2940, category: "accessories", sizes: ["30″×60″"], color: "White",
+  },
+  backpack: {
+    type: "backpack", label: "Backpack", short: "Backpack",
+    catalogProductId: 279, placement: "front", technique: "cut-sew", // all-over print; other panels solid black
+    priceCents: 6499, format: "backpack", costCents: 3895, category: "accessories", sizes: ["One size"], color: "White",
+    fills: [
+      { placement: "top", w: 28, h: 8 },
+      { placement: "bottom", w: 28, h: 5 },
+      { placement: "pocket", w: 13, h: 8 },
+    ],
+  },
 };
 
 export function getBlank(type: BlankType): BlankConfig {
@@ -118,7 +138,7 @@ export function retailPriceCents(type: BlankType): number {
 }
 
 /** Size options in display order (stickers use Printful's "4″×4″" labels). */
-export const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL", "3″×3″", "4″×4″", "5.5″×5.5″", "11 oz", "15 oz", "One size"];
+export const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL", "3″×3″", "4″×4″", "5.5″×5.5″", "11 oz", "15 oz", "30″×60″", "One size"];
 
 /** The size a mockup and the "typical cost" use. */
 export const typicalSize = (b: BlankConfig) => (b.sizes.includes("M") ? "M" : b.sizes.includes("4″×4″") ? "4″×4″" : b.sizes[0]);

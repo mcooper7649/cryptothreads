@@ -6,6 +6,7 @@ import { putAsset, readAsset } from "@/lib/storage";
 import { getBlank, BlankType, retailPriceCents, typicalSize } from "@/lib/printful/blanks";
 import { uploadFile } from "@/lib/printful/files";
 import { generateMockups } from "@/lib/printful/mockups";
+import { fillPlacements } from "@/lib/printful/fills";
 import { getCatalogVariants, getVariantBasePrice, sellableVariants } from "@/lib/printful/catalog";
 import { DEFAULT_STYLE, STYLES, styleUsesSlogan, type StyleId } from "@/lib/design/styles";
 import { resolveSlogan } from "@/lib/slogans";
@@ -228,6 +229,7 @@ export async function printfulListing(asset: PrintAsset, blankType: BlankType) {
           placement: blank.placement,
           technique: blank.technique,
           fileId: file.id,
+          extra: await fillPlacements(blank),
         });
         // Printful's mockup URLs are temporary (/tmp/ on S3), so keep our own copies.
         mockupUrls = [];

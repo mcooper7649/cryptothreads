@@ -21,6 +21,8 @@ const LINEUP: { blankType: BlankType; minScore: number }[] = [
   { blankType: "womens_tank", minScore: 9 },
   { blankType: "hat", minScore: 9 },
   { blankType: "mug", minScore: 9 },
+  { blankType: "towel", minScore: 9 },
+  { blankType: "backpack", minScore: 9 },
 ];
 
 /** Make products for the hottest live trending slogans that are missing them. */

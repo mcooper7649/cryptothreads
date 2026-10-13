@@ -4,6 +4,7 @@ import { getBlank, BlankType, type BlankConfig } from "@/lib/printful/blanks";
 import { getCatalogVariants, sellableVariants, type CatalogVariant } from "@/lib/printful/catalog";
 import type { StyleId } from "@/lib/design/styles";
 import { uploadFile } from "@/lib/printful/files";
+import { fillPlacements } from "@/lib/printful/fills";
 import { createDraftOrder, confirmOrder, Recipient, OrderItemInput } from "@/lib/printful/orders";
 import type { DesignMode } from "@prisma/client";
 
@@ -76,6 +77,7 @@ export async function fulfillOrder(orderId: string): Promise<void> {
       placement: blank.placement,
       technique: blank.technique,
       fileId: file.id,
+      extra: await fillPlacements(blank),
     });
   }
 
