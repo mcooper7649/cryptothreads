@@ -97,6 +97,16 @@ async function toPanel(png: Buffer, w: number, h: number, share: number, rise = 
     .toBuffer();
 }
 
+/** Black panel with the art fitted into its top half (above a front pocket). */
+async function toTopPanel(png: Buffer, w: number, h: number): Promise<Buffer> {
+  const art = await fit(png, Math.round(w * 0.8), Math.round(h * 0.46));
+  const meta = await sharp(art).metadata();
+  return sharp({ create: { width: w, height: h, channels: 4, background: STICKER_BG } })
+    .composite([{ input: art, top: Math.round(h * 0.06), left: Math.round((w - (meta.width ?? 0)) / 2) }])
+    .png()
+    .toBuffer();
+}
+
 /** Trimmed art fitted into a box. */
 async function fit(png: Buffer, w: number, h: number): Promise<Buffer> {
   return sharp(png).trim({ threshold: 1 }).resize({ width: w, height: h, fit: "inside" }).png().toBuffer();
@@ -178,7 +188,8 @@ export async function renderPrintFile(input: RenderInput): Promise<RenderOutput>
   if (input.format === "towel" || input.format === "backpack") {
     const towel = input.format === "towel";
     const [w, h] = towel ? [TOWEL_W, TOWEL_H] : [PACK_W, PACK_H];
-    const lay = (png: Buffer, pw: number, ph: number) => toPanel(png, pw, ph, towel ? 0.8 : 0.78, towel ? 0.08 : 0.04);
+    // The backpack's front pocket covers the lower ~45% of the panel, so its art sits in the top half.
+    const lay = (png: Buffer, pw: number, ph: number) => (towel ? toPanel(png, pw, ph, 0.8, 0.08) : toTopPanel(png, pw, ph));
     const previewW = Math.round(PREVIEW_W * 0.6);
     const previewPng = await lay(raster(PREVIEW_W * 2), previewW, Math.round((previewW * h) / w));
     if (input.previewOnly) return { printPng: Buffer.alloc(0), previewPng, width: w, height: h, accent };
