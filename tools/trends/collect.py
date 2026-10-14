@@ -224,7 +224,7 @@ def accounts():
 
 PROMPT = """You write slogans for CryptoThreads, a crypto streetwear shop. Each slogan is printed big on a black t-shirt.
 
-House voice (existing slogans, do NOT repeat these or the "already live" ones):
+House voice (existing slogans, do NOT repeat these or the "already live" ones, and don't reword their jokes either: same joke, new words is a repeat):
 {existing}
 
 Already live as trending: {live}
@@ -348,6 +348,26 @@ EXAMPLES = [["BOUGHT THE", "TOP", "AGAIN"], ["MY BAGS", "ARE", "HEAVY"], ["GM", 
 squash = lambda lines: re.sub(r"[^a-z0-9]", "", "".join(lines).lower())
 
 
+# Styles where the slogan is the small print under a stock graphic: from a few feet away
+# they all read as "the BTC receipt shirt", so one of each per batch.
+SMALL_PRINT_STYLES = {"receipt", "chart", "stamp", "box"}
+
+
+def pick_batch(ranked, size=12, per_style=2, per_coin=4):
+    """Best first, but no more than 2 of a style (1 of the small-print ones) or 4 on one coin."""
+    styles, coins, out = {}, {}, []
+    for c in ranked:
+        st, tk = c["style"], c["ticker"] or "?"
+        if styles.get(st, 0) >= (1 if st in SMALL_PRINT_STYLES else per_style) or coins.get(tk, 0) >= per_coin:
+            continue
+        styles[st] = styles.get(st, 0) + 1
+        coins[tk] = coins.get(tk, 0) + 1
+        out.append(c)
+        if len(out) == size:
+            break
+    return out
+
+
 def cross_post(token, created):
     """Hand the best new slogan to the @FloorFeed poster (FloorFeed allows one a day)."""
     if not created or not env("FLOORFEED_SOCIAL_TOKEN"):
@@ -357,7 +377,7 @@ def cross_post(token, created):
     if not best:
         return
     site = env("SITE_URL", "https://cryptothreads.us").rstrip("/")
-    link = f"{site}/generate?q={best['ticker']}&style={best['style']}&slogan={best['id']}"
+    link = f"{site}/t/{best['id']}"  # the tee once it's built, the studio until then
     text = f"New on CryptoThreads: \"{' '.join(best['lines'])}\" 👕\n\n{best['blurb']}\n\n{link}"
     try:
         floorfeed("POST", "/social/draft", {"kind": "merch", "key": best["id"], "text": text, "image": best["previewUrl"]})
@@ -418,8 +438,8 @@ def main():
         for c in sorted(candidates, key=lambda c: -c["score"]):
             if c["score"] < MIN_SCORE:
                 print(f"  (below {MIN_SCORE:g}) {c['score']:>4} {' / '.join(c['lines'])}")
-    # Only the ones the writer itself rates as wearable go live.
-    candidates = sorted((c for c in candidates if c["score"] >= MIN_SCORE), key=lambda c: -c["score"])[:12]
+    # Only the ones the writer itself rates as wearable go live, spread across looks and coins.
+    candidates = pick_batch(sorted((c for c in candidates if c["score"] >= MIN_SCORE), key=lambda c: -c["score"]))
     for c in candidates:
         print(f"  {c['score']:>4} {' / '.join(c['lines']):<36} {c['ticker']:<7} {c['style']:<8} {c['source']:<10} {c['blurb']}")
     if dry:
@@ -434,7 +454,7 @@ def main():
 
     m = json.loads(http(f"{API}/api/admin/maintain", {"likes": likes}, {"x-admin-token": token}, timeout=600))
     print(f"maintain: {json.dumps(m)}")
-    # New memes become shop products (tee; 8+ adds hoodie + women's tee; 9+ tanks, hat, mug). Mockups are
+    # New memes become shop products (tee; 9+ adds a hoodie; the rest once shoppers bite). Mockups are
     # slow, so the app builds them in the background (log: docker logs cryptothreads-app).
     created = res["created"] if candidates else []
     body = {"sloganIds": created, **({"drop": {"title": str(DROP.get("title", ""))[:90], "intro": str(DROP.get("intro", ""))[:700]}} if DROP and created else {})}

@@ -1,13 +1,15 @@
 import { prisma } from "@/lib/db";
 import { fetchLogoFromSources } from "@/lib/logo/resolve";
 import { renderPrintFile } from "@/lib/design/render";
+import { runsOffEdge } from "@/lib/design/render-check";
 import { STYLES, type StyleId } from "@/lib/design/styles";
 import { putAsset } from "@/lib/storage";
-import { normalizeLines, rejectReason, squash, tickerRejectReason } from "@/lib/trend-filter";
+import { nearDuplicate, normalizeLines, rejectReason, squash, tickerRejectReason } from "@/lib/trend-filter";
 import { TRENDING_PREFIX } from "@/lib/slogans";
 
 export const SLOGAN_STYLES = STYLES.filter((s) => s.slogan).map((s) => s.id) as StyleId[];
 const FALLBACK_COINS = ["BTC", "ETH", "SOL", "DOGE"];
+const SAFE_STYLE: StyleId = "slogan";
 
 export interface SloganCandidate {
   lines: string[];
@@ -53,8 +55,17 @@ export async function publishSlogan(c: SloganCandidate, expiresAt: Date, i = 0):
     });
     return { status: "refreshed", id };
   }
+  // The same joke reworded, against what's live or ran in the last two weeks (events reuse fixed ids).
+  if (!c.id) {
+    const recent = await prisma.trendingSlogan.findMany({
+      where: { OR: [{ expiresAt: { gt: new Date() } }, { createdAt: { gt: new Date(Date.now() - 14 * 86_400_000) } }] },
+      select: { lines: true },
+    });
+    const twin = recent.find((r) => nearDuplicate(lines, r.lines));
+    if (twin) return { status: "rejected", reason: `same joke as ${twin.lines.join(" / ")}` };
+  }
 
-  const style = SLOGAN_STYLES.includes(c.style as StyleId) ? (c.style as StyleId) : SLOGAN_STYLES[i % SLOGAN_STYLES.length];
+  let style = SLOGAN_STYLES.includes(c.style as StyleId) ? (c.style as StyleId) : SLOGAN_STYLES[i % SLOGAN_STYLES.length];
   let ticker = (c.ticker || "").replace(/^\$/, "").toUpperCase();
   if (ticker && tickerRejectReason(ticker)) {
     if (c.keepTicker) return { status: "rejected", reason: tickerRejectReason(ticker)! };
@@ -68,14 +79,16 @@ export async function publishSlogan(c: SloganCandidate, expiresAt: Date, i = 0):
   }
 
   try {
-    const out = await renderPrintFile({
-      logoData: logo?.data,
-      isVector: logo?.isVector,
-      ticker,
-      style,
-      sloganLines: lines,
-      previewOnly: true,
-    });
+    const render = (st: StyleId) =>
+      renderPrintFile({ logoData: logo?.data, isVector: logo?.isVector, ticker, style: st, sloganLines: lines, previewOnly: true });
+    let out = await render(style);
+    // Ran off the canvas in its style: the plain meme layout fits anything the filter allows.
+    if (await runsOffEdge(out.previewPng)) {
+      console.warn("[trending] runs off the edge in", style, "->", SAFE_STYLE, id);
+      style = SAFE_STYLE;
+      out = await render(style);
+      if (await runsOffEdge(out.previewPng)) return { status: "rejected", reason: "doesn't fit the print area" };
+    }
     const stored = await putAsset(`trending/${id}-${style}-${ticker.toLowerCase()}.png`, out.previewPng, "image/png");
     await prisma.trendingSlogan.create({
       data: {

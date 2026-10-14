@@ -98,3 +98,21 @@ export function tickerRejectReason(ticker: string): string | null {
   return hit ? `blocked ticker (${hit})` : null;
 }
 
+
+// Words that carry no joke on their own, for near-duplicate checks.
+const STOP = new Set(
+  "A AN THE I IM MY ME WE OUR YOU YOUR IT ITS IS ARE WAS WERE BE BEEN AM TO OF IN ON AT FOR WITH AND OR BUT SO JUST STILL ALL NO NOT DONT THIS THAT THESE GOT GET UP OUT AGAIN".split(" ")
+);
+const stem = (w: string) => w.replace(/(ING|ED|ES|S)$/, "") || w;
+export const jokeWords = (lines: string[]) =>
+  new Set(lines.join(" ").toUpperCase().replace(/'/g, "").split(/[^A-Z0-9]+/).filter((w) => w && !STOP.has(w)).map(stem));
+
+/** Same joke reworded ("IT'S ON THE BOX / I TRUSTED IT" vs "IT WAS LITERALLY / ON THE BOX"). */
+export function nearDuplicate(a: string[], b: string[]): boolean {
+  const A = jokeWords(a);
+  const B = jokeWords(b);
+  let shared = 0;
+  A.forEach((w) => { if (B.has(w)) shared++; });
+  const union = A.size + B.size - shared;
+  return shared >= 2 || (shared >= 1 && union <= 3);
+}

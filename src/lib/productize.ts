@@ -3,27 +3,40 @@ import { generateProduct } from "@/lib/generate";
 import { sloganHeat } from "@/lib/signals";
 import type { StyleId } from "@/lib/design/styles";
 import type { BlankType } from "@/lib/printful/blanks";
+import type { TrendingSlogan } from "@prisma/client";
 
 /**
- * Trending memes become real shop products (a tee each, more blanks for
- * high scorers; see LINEUP), with Printful mockups, so they show up in the shop, on coin pages and in "Hot off the
+ * Trending memes become real shop products (a tee each, more blanks once they earn
+ * them; see LINEUP), with Printful mockups, so they show up in the shop, on coin pages and in "Hot off the
  * press", not only as studio presets. Run by the collector after each pass.
  */
 
 const PER_RUN = 12;
 const HOUR = 3_600_000;
-/** Which blanks a trending slogan gets, by the writer's score: more options for the strongest. */
-const LINEUP: { blankType: BlankType; minScore: number }[] = [
+/**
+ * Which blanks a trending slogan gets. Every trend gets a tee (and a hoodie when the
+ * writer rates it 9+); the rest of the lineup waits until shoppers show interest, so
+ * the shop isn't 9 unviewed products per joke.
+ */
+const LINEUP: { blankType: BlankType; minScore?: number }[] = [
   { blankType: "tee", minScore: 0 },
-  { blankType: "hoodie", minScore: 8 },
-  { blankType: "womens_tee", minScore: 8 },
-  { blankType: "tank", minScore: 9 },
-  { blankType: "womens_tank", minScore: 9 },
-  { blankType: "hat", minScore: 9 },
-  { blankType: "mug", minScore: 9 },
-  { blankType: "towel", minScore: 9 },
-  { blankType: "backpack", minScore: 9 },
+  { blankType: "hoodie", minScore: 9 },
+  { blankType: "womens_tee" },
+  { blankType: "tank" },
+  { blankType: "womens_tank" },
+  { blankType: "hat" },
+  { blankType: "mug" },
+  { blankType: "towel" },
+  { blankType: "backpack" },
 ];
+const WAITING = "lineup: waiting for demand";
+
+/** Shoppers (or X) have shown they want this one: it earns the full lineup. */
+export const earned = (t: Pick<TrendingSlogan, "views" | "carts" | "orders" | "likes" | "pinned">) =>
+  t.pinned || t.orders > 0 || t.carts > 0 || t.views >= 20 || t.likes >= 10;
+
+const wants = (t: TrendingSlogan, l: (typeof LINEUP)[number]) =>
+  (l.minScore !== undefined && t.score >= l.minScore) || earned(t);
 
 /** Make products for the hottest live trending slogans that are missing them. */
 export async function productizeTrending(limit = PER_RUN, firstIds: string[] = []) {
@@ -37,8 +50,8 @@ export async function productizeTrending(limit = PER_RUN, firstIds: string[] = [
   // This run's new slogans first (so their drop is complete), then the rest by heat.
   const first = new Set(firstIds);
   for (const t of live.sort((a, b) => Number(first.has(b.id)) - Number(first.has(a.id)) || sloganHeat(b) - sloganHeat(a))) {
-    for (const { blankType, minScore } of LINEUP) {
-      if (t.score >= minScore && !have.has(`${t.id}:${blankType}`)) todo.push({ t, blankType });
+    for (const l of LINEUP) {
+      if (wants(t, l) && !have.has(`${t.id}:${l.blankType}`)) todo.push({ t, blankType: l.blankType });
     }
   }
 
@@ -78,7 +91,28 @@ export async function retireTrendProducts(now = new Date()) {
     where: { status: "ACTIVE", carts: 0, orders: 0, design: { slogan: { in: over.map((o) => o.id) } } },
     data: { status: "DRAFT", retiredReason: "trend over, no carts" },
   });
-  return { disabled: disabled.count, retired: retired.count };
+
+  // Blanks a live slogan hasn't earned yet wait in DRAFT; they come back when it does.
+  const live = await prisma.trendingSlogan.findMany({ where: { hidden: false, expiresAt: { gt: now } } });
+  let waiting = 0;
+  let revived = 0;
+  for (const l of LINEUP) {
+    const yes = live.filter((t) => wants(t, l)).map((t) => t.id);
+    const no = live.filter((t) => !wants(t, l)).map((t) => t.id);
+    if (no.length) {
+      waiting += (await prisma.product.updateMany({
+        where: { status: "ACTIVE", blankType: l.blankType, carts: 0, orders: 0, design: { slogan: { in: no } } },
+        data: { status: "DRAFT", retiredReason: WAITING },
+      })).count;
+    }
+    if (yes.length) {
+      revived += (await prisma.product.updateMany({
+        where: { status: "DRAFT", retiredReason: WAITING, blankType: l.blankType, design: { slogan: { in: yes } } },
+        data: { status: "ACTIVE", retiredReason: null },
+      })).count;
+    }
+  }
+  return { disabled: disabled.count, retired: retired.count, waiting, revived };
 }
 
 /** Disable the products of one slogan (admin hide). */
