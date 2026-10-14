@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { generateProduct } from "@/lib/generate";
+import { buildPrintAsset, generateProduct, printfulListing } from "@/lib/generate";
 import { sloganHeat } from "@/lib/signals";
 import type { StyleId } from "@/lib/design/styles";
 import type { BlankType } from "@/lib/printful/blanks";
@@ -12,6 +12,7 @@ import type { TrendingSlogan } from "@prisma/client";
  */
 
 const PER_RUN = 12;
+const MOCKUP_RETRIES = 5;
 const HOUR = 3_600_000;
 /**
  * Which blanks a trending slogan gets. Every trend gets a tee (and a hoodie when the
@@ -57,6 +58,30 @@ export async function productizeTrending(limit = PER_RUN, firstIds: string[] = [
 
   const made: string[] = [];
   const failed: string[] = [];
+
+  // Products left in DRAFT because Printful's mockup timed out get another go first.
+  const stuck = await prisma.product.findMany({
+    where: { status: "DRAFT", retiredReason: null, mockupUrls: { isEmpty: true }, design: { slogan: { in: live.map((t) => t.id) } } },
+    include: { design: true },
+    take: MOCKUP_RETRIES,
+  });
+  for (const p of stuck) {
+    try {
+      const asset = await buildPrintAsset(
+        p.query ?? "",
+        { mode: p.design.mode, style: p.design.style as StyleId, slogan: p.design.slogan ?? undefined },
+        p.blankType as BlankType
+      );
+      const { mockupUrls, variants, baseCostCents } = await printfulListing(asset, p.blankType as BlankType);
+      if (!mockupUrls.length) throw new Error("still no mockup");
+      await prisma.product.update({ where: { id: p.id }, data: { mockupUrls, variants: variants as any, baseCostCents, status: "ACTIVE" } });
+      made.push(`${p.slug} (retried)`);
+    } catch (e) {
+      console.error("[productize] retry", p.slug, (e as Error).message);
+      failed.push(`${p.slug} (retry)`);
+    }
+  }
+
   for (const { t, blankType } of todo.slice(0, limit)) {
     try {
       const p = await generateProduct({ query: t.ticker, style: t.style as StyleId, slogan: t.id, blankType });

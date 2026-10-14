@@ -101,7 +101,10 @@ export function tickerRejectReason(ticker: string): string | null {
 
 // Words that carry no joke on their own, for near-duplicate checks.
 const STOP = new Set(
-  "A AN THE I IM MY ME WE OUR YOU YOUR IT ITS IS ARE WAS WERE BE BEEN AM TO OF IN ON AT FOR WITH AND OR BUT SO JUST STILL ALL NO NOT DONT THIS THAT THESE GOT GET UP OUT AGAIN".split(" ")
+  (
+    "A AN THE I IM MY ME WE OUR YOU YOUR IT ITS IS ARE WAS WERE BE BEEN AM TO OF IN ON AT FOR WITH AND OR BUT SO JUST STILL ALL NO NOT DONT THIS THAT THESE GOT GET UP OUT AGAIN " +
+    "NEW SAME DAY WAY ONE EVERY MORE TOO VERY NOW TODAY HAVE HAS"
+  ).split(" ")
 );
 const stem = (w: string) => w.replace(/(ING|ED|ES|S)$/, "") || w;
 export const jokeWords = (lines: string[]) =>
