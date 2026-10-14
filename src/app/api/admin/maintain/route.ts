@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/auth";
-import { pinAndPrune, recordLikes, retireDeadCoins, syncEvents } from "@/lib/maintenance";
+import { expireAbandonedCheckouts, pinAndPrune, recordLikes, retireDeadCoins, syncEvents } from "@/lib/maintenance";
 import { promotePending } from "@/lib/community";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ const Body = z.object({
 /**
  * Freshness pass, run by the trend collector after each collection: X likes in,
  * event designs up, proven sellers pinned, duds ended, dead coins retired,
- * voted community ideas printed. Each step reports on its own so one failing
+ * voted community ideas printed, abandoned checkouts closed. Each step reports on its own so one failing
  * (CoinGecko down) doesn't block the rest.
  */
 export async function POST(req: NextRequest) {
@@ -34,5 +34,6 @@ export async function POST(req: NextRequest) {
     pins: await step(() => pinAndPrune()),
     coins: await step(() => retireDeadCoins()),
     community: await step(() => promotePending()),
+    checkouts: await step(() => expireAbandonedCheckouts()),
   });
 }

@@ -114,3 +114,16 @@ export async function recordLikes(items: { id: string; likes: number; tweetUrl?:
   }
   return items.length;
 }
+
+/**
+ * Checkouts nobody paid: Stripe sessions die after 24h, but bank debits can settle
+ * days later, so wait a week. A payment that does land still fulfills (the webhook
+ * marks the order PAID whatever its status).
+ */
+export async function expireAbandonedCheckouts(now = new Date()) {
+  const r = await prisma.order.updateMany({
+    where: { status: "PENDING", paymentStatus: "UNPAID", createdAt: { lt: new Date(now.getTime() - 7 * 86_400_000) } },
+    data: { status: "CANCELLED" },
+  });
+  return { cancelled: r.count };
+}
