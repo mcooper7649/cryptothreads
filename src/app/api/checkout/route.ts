@@ -84,6 +84,24 @@ export async function POST(req: NextRequest) {
       title: it.title || `${it.query.toUpperCase()} ${it.blankType}`,
     }))
   );
+
+  // A design taken down in /admin (any blank) can't be re-ordered from the studio.
+  for (const it of priced) {
+    const takenDown = await prisma.product.findFirst({
+      where: {
+        status: "DISABLED",
+        query: { equals: it.query, mode: "insensitive" },
+        design: { mode: it.mode, style: it.style, slogan: it.slogan },
+      },
+      select: { id: true },
+    });
+    if (takenDown) {
+      return NextResponse.json(
+        { error: "design unavailable", message: "One of the designs in your bag is no longer available. Remove it and try again." },
+        { status: 400 }
+      );
+    }
+  }
   const subtotalCents = priced.reduce((s, i) => s + i.priceCents * i.qty, 0);
   const totalCents = subtotalCents + SHIPPING_FLAT_CENTS;
 

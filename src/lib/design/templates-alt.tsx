@@ -150,7 +150,7 @@ export function Headline(p: TemplateProps) {
 export function Vapor(p: TemplateProps) {
   const PINK = "#ff4fd8";
   const CYAN = "#3ef4ff";
-  const size = fitLines(p.slogan, 3900, 0.62, 640);
+  const size = fitLines(p.slogan, 3900, 0.8, 640); // Monoton is wide
   const sun = 2500;
   return (
     <div style={frame({ justifyContent: "flex-start", paddingTop: 260 })}>
@@ -227,7 +227,7 @@ export function Tarot(p: TemplateProps) {
   const ch = 4900;
   const n = (p.ticker.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 21) + 1;
   const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI"][n - 1];
-  const size = fitLines(p.slogan, 2400, 0.62, 330);
+  const size = fitLines(p.slogan, 2400, 0.74, 330); // Cinzel Decorative caps are wide
   return (
     <div style={frame()}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: cw, height: ch, border: `40px solid ${GOLD}`, borderRadius: 80, padding: 60 }}>
@@ -301,13 +301,18 @@ function LaserEye({ x, y, scale, dir }: { x: number; y: number; scale: number; d
  */
 export function Art(p: TemplateProps) {
   const maxW = 3900;
-  const maxH = 3500;
   const aw = p.artW ?? 1;
   const ah = p.artH ?? 1;
+  // Vertical budget: margins + gaps + credit line take ~650; the slogan gets what it
+  // needs and the painting shrinks to fit (portraits would otherwise push line 3 off).
+  const n = Math.max(1, p.slogan.length);
+  const minArt = 2300;
+  let size = fitLines(p.slogan, 4100, 0.47, 700);
+  size = Math.min(size, Math.floor((H - 650 - minArt) / (n * 1.02)));
+  const maxH = Math.min(3500, H - 650 - Math.ceil(n * size * 1.02));
   const k = Math.min(maxW / aw, maxH / ah);
   const w = Math.round(aw * k);
   const h = Math.round(ah * k);
-  const size = fitLines(p.slogan, 4100, 0.47, 700);
   const eyes = p.eyes ?? [];
   // Beams fan out away from the face's center.
   const cx = eyes.reduce((a, e) => a + e[0], 0) / Math.max(1, eyes.length);

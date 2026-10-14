@@ -8,11 +8,12 @@ import { SLOGANS } from "@/lib/design/styles";
 
 const MAX_LINES = 3;
 const MAX_LINE = 12; // the stacked styles get cramped past this
-const MAX_TOTAL = 30;
+const MAX_TOTAL = 34;
 // Glyphs the bundled fonts print cleanly.
 const PRINTABLE = /^[A-Z0-9 $'!?,.&()#%+=\-/]+$/;
 
-// Substring matches on the squashed text (spaces and punctuation removed).
+// Substring matches inside each word; terms of CROSS_MIN+ letters also match across
+// words (so "CASH APP" and "HARRY POTTER" still hit), and so does spaced-out "F U C K".
 const BLOCKED = [
   // trademarks, characters and meme images we can't print
   "pudgy", "penguin", "pepe", "wojak", "disney", "mickey", "marvel", "pokemon", "pikachu",
@@ -41,6 +42,31 @@ const BLOCKED_WORDS = [
   "PUTIN", "VOTE", "WOKE", "GUN", "GUNS", "RAPE", "KYS", "CUM", "METH", "SPIC", "CHAD", "GIGACHAD",
 ];
 
+// Real words that contain a blocked term.
+const ALLOWED_WORDS = ["SKILL", "SKILLS", "SKILLED", "SKILLFUL", "SKILLSET", "ESSEX", "SUSSEX"];
+const CROSS_MIN = 5;
+
+function blockedHit(text: string): string | undefined {
+  const words = text.toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  const inWord = words
+    .filter((w) => !ALLOWED_WORDS.includes(w))
+    .map(squash)
+    .flatMap((w) => BLOCKED.filter((b) => w.includes(b)));
+  if (inWord.length) return inWord[0];
+  const whole = squash(text);
+  const across = BLOCKED.find((b) => b.length >= CROSS_MIN && whole.includes(b));
+  if (across) return across;
+  // Runs of 1-2 letter tokens ("F U C K", "S H I T").
+  let run = "";
+  for (const w of [...words, "END"]) {
+    if (w.length <= 2) { run += w; continue; }
+    const hit = run.length >= 3 ? BLOCKED.find((b) => squash(run).includes(b)) : undefined;
+    if (hit) return hit;
+    run = "";
+  }
+  return undefined;
+}
+
 export const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export function normalizeLines(lines: string[]): string[] {
@@ -55,7 +81,7 @@ export function rejectReason(lines: string[]): string | null {
   if (lines.some((l) => !PRINTABLE.test(l))) return "has characters we can't print";
   const flat = squash(lines.join(""));
   if (flat.length < 2) return "too short";
-  const hit = BLOCKED.find((b) => flat.includes(b));
+  const hit = blockedHit(lines.join(" "));
   if (hit) return `blocked term (${hit})`;
   const words = lines.join(" ").split(/[^A-Z0-9]+/);
   const word = BLOCKED_WORDS.find((w) => words.includes(w));
