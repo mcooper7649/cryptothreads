@@ -7,8 +7,8 @@ DEXes (GeckoTerminal) and CoinGecko, and what crypto Polymarket is betting on;
 asks Claude (or the local Ollama model when ANTHROPIC_API_KEY isn't set) to turn
 it into short shirt slogans in the house voice, and posts them to
 /api/admin/trending, which filters, renders and auto-publishes them (hide any in
-/admin). Then it hands the best new one to the @FloorFeed poster, reads likes on
-earlier ones back off X, and runs the shop's freshness pass (/api/admin/maintain).
+/admin). Then it runs the shop's freshness pass (/api/admin/maintain) and builds
+products for the new memes.
 Runs on the homelab from cron; see README.md next to this file.
 
   collect.py            collect and publish
@@ -21,7 +21,6 @@ API = os.environ.get("CT_API", "http://127.0.0.1:8040")
 OLLAMA = os.environ.get("OLLAMA_URL", "http://192.168.68.110:11434")
 OLLAMA_MODEL = os.environ.get("TRENDS_OLLAMA_MODEL", "qwen2.5:14b-instruct")
 CLAUDE_MODEL = os.environ.get("TRENDS_MODEL", "claude-opus-5-5")
-FLOORFEED = os.environ.get("FLOORFEED_API", "http://127.0.0.1:8030")
 MAJORS = {"BTC", "ETH", "SOL", "DOGE", "XRP", "BNB", "ADA", "LINK", "AVAX", "SUI", "PEPE", "SHIB", "WIF", "BONK", "TRX", "LTC", "TON"}
 # DEX coins must have real money behind them before we print their ticker.
 DEX_MIN_LIQ = 150_000
@@ -147,22 +146,14 @@ def polymarket():
     return [("polymarket", "Bettors are wagering on: " + t) for t in titles if t and not re.search(r"\bprice\b|above|below|hit .* (in|on|by)|up or down", t, re.I)][:10]
 
 
-def floorfeed(method, path, body=None):
-    token = env("FLOORFEED_SOCIAL_TOKEN")
-    if not token:
-        return None
-    return json.loads(http(f"{FLOORFEED}{path}", body, {"Authorization": f"Bearer {token}"}) or b"null")
-
-
-def x_posts(merch=()):
-    """Finance trends plus a few top searches, read through the saved session. One visit per page, no posting.
-    Also reads like counts off our earlier @FloorFeed drop posts (merch). Returns (posts, likes)."""
+def x_posts():
+    """Finance trends plus a few top searches, read through the saved session. One visit per page, no posting."""
     if not X_STATE or not os.path.exists(X_STATE):
         print("X skipped: no X_STATE", file=sys.stderr)
-        return [], []
+        return []
     from playwright.sync_api import sync_playwright
 
-    out, likes = [], []
+    out = []
     with sync_playwright() as p:
         b = p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled"])
         ctx = b.new_context(storage_state=X_STATE, user_agent=UA, viewport={"width": 1280, "height": 1800})
@@ -197,19 +188,8 @@ def x_posts(merch=()):
                         n += 1
         except Exception as e:
             print(f"x: {e}", file=sys.stderr)
-        for m in list(merch)[:5]:
-            try:
-                time.sleep(5)
-                pg.goto(m["post_url"], wait_until="domcontentloaded")
-                time.sleep(6)
-                btn = pg.locator("article [data-testid=like], article [data-testid=unlike]").first
-                label = btn.get_attribute("aria-label") or ""
-                n = re.search(r"([\d,]+)", label)
-                likes.append({"id": m["key"].split(":", 1)[1], "likes": int(n.group(1).replace(",", "")) if n else 0, "tweetUrl": m["post_url"]})
-            except Exception as e:
-                print(f"x likes {m.get('post_url')}: {e}", file=sys.stderr)
         b.close()
-    return out, likes
+    return out
 
 
 def accounts():
@@ -368,24 +348,6 @@ def pick_batch(ranked, size=12, per_style=2, per_coin=4):
     return out
 
 
-def cross_post(token, created):
-    """Hand the best new slogan to the @FloorFeed poster (FloorFeed allows one a day)."""
-    if not created or not env("FLOORFEED_SOCIAL_TOKEN"):
-        return
-    entries = {e["id"]: e for e in json.loads(http(f"{API}/api/admin/trending", headers={"x-admin-token": token}))["entries"]}
-    best = max((entries[i] for i in created if i in entries), key=lambda e: e["score"], default=None)
-    if not best:
-        return
-    site = env("SITE_URL", "https://cryptothreads.us").rstrip("/")
-    link = f"{site}/t/{best['id']}"  # the tee once it's built, the studio until then
-    text = f"New on CryptoThreads: \"{' '.join(best['lines'])}\" 👕\n\n{best['blurb']}\n\n{link}"
-    try:
-        floorfeed("POST", "/social/draft", {"kind": "merch", "key": best["id"], "text": text, "image": best["previewUrl"]})
-        print(f"cross-posted {best['id']} to @FloorFeed queue")
-    except Exception as e:
-        print(f"cross-post skipped: {e}", file=sys.stderr)
-
-
 def main():
     dry = "--dry-run" in sys.argv
     token = admin_token()
@@ -396,13 +358,7 @@ def main():
     except Exception as e:
         print(f"couldn't read live trending: {e}", file=sys.stderr)
 
-    merch = []
-    try:
-        merch = [m for m in (floorfeed("GET", "/social/posted?kind=merch&days=7") or []) if m.get("post_url")]
-    except Exception as e:
-        print(f"floorfeed posted: {e}", file=sys.stderr)
-
-    xp, likes = x_posts(merch)
+    xp = x_posts()
     posts = reddit() + xp + polymarket()
     coins = coingecko()
     dex = dex_coins()
@@ -450,9 +406,8 @@ def main():
         print(f"published {len(res['created'])}, refreshed {len(res['refreshed'])}, rejected {len(res['rejected'])}")
         for r in res["rejected"]:
             print(f"  rejected {' / '.join(r['lines'])}: {r['reason']}")
-        cross_post(token, res["created"])
 
-    m = json.loads(http(f"{API}/api/admin/maintain", {"likes": likes}, {"x-admin-token": token}, timeout=600))
+    m = json.loads(http(f"{API}/api/admin/maintain", {}, {"x-admin-token": token}, timeout=600))
     print(f"maintain: {json.dumps(m)}")
     # New memes become shop products (tee; 9+ adds a hoodie; the rest once shoppers bite). Mockups are
     # slow, so the app builds them in the background (log: docker logs cryptothreads-app).
